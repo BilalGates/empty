@@ -17,6 +17,4 @@ App Group cache while the project selects and audits an iOS XChaCha20-Poly1305 d
 and lands the shared CBOR/vector corpus. Do not sync this cache file or treat it as a V1
 wire artifact.
 
-The checked-in project descriptor contains placeholder identifiers. Follow
-`docs/operations/ios-signing.md` before device testing or distribution.
-
+The checked-in project descriptor uses development bundle identifiers but no team or signing material. Follow `docs/operations/ios-signing.md` before device testing or distribution.

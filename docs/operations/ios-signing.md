@@ -4,7 +4,7 @@ Status: scaffolding; signing and device verification are release blockers.
 
 ## Required Apple configuration
 
-The identifiers in `apps/ios/project.yml` are placeholders. An Apple Developer Account
+The development identifiers in `apps/ios/project.yml` must be registered to the selected team. An Apple Developer Account
 Holder or Admin must create and consistently configure:
 
 1. An explicit App ID for the host app (`com.space`).
@@ -66,9 +66,7 @@ AutoFill identity suggestions. Those require a signed build on a passcode-protec
   XChaCha20-Poly1305/CBOR format. Production sync is blocked until Security approves a
   maintained XChaCha implementation, deterministic CBOR, and the common positive/negative
   vector corpus. Do not substitute AES-GCM for V1 without a new versioned suite and ADR.
-- The placeholder bootstrap vault UUID must be replaced by authenticated account bootstrap
-  metadata before two vaults or accounts can be used. It is public context, not a key, but a
-  constant does not provide correct vault isolation.
+The locally generated vault identity must be bound to authenticated account bootstrap before multiple accounts are supported. It is public context, not a key, but an unauthenticated local identity does not prove server-side account or vault ownership.
 - Master-password Argon2id, recovery, device transfer, signed sync/checkpoints, imports, and
   revocation transport are not implemented by this scaffold. Biometric unlock is not a
   recovery mechanism.
@@ -85,4 +83,3 @@ References: Apple's public documentation for
 [credential identity storage](https://developer.apple.com/documentation/authenticationservices/ascredentialidentitystore),
 [Keychain access control](https://developer.apple.com/documentation/security/restricting-keychain-item-accessibility),
 and [LocalAuthentication](https://developer.apple.com/documentation/localauthentication/lacontext).
-

@@ -1,6 +1,6 @@
 # Release remediation
 
-Status: blocked by local execution helper; release remains not ready.
+Status: implementation remediations complete; external release gates remain.
 
 ## High findings to close
 
@@ -24,3 +24,8 @@ Status: blocked by local execution helper; release remains not ready.
 
 After filesystem execution is restored: initialize Git on `feat/space-foundation`, install and lock dependencies, run `npm run check`, security scripts, PostgreSQL integration tests, deterministic extension packaging, Docker build/health, loaded Chrome E2E, and macOS iOS build. Re-run independent Security and QA reviews. No real secrets may be stored before all High findings are closed and evidence is recorded.
 
+## Evidence recorded 2026-09-06
+
+All High and medium code findings above are closed. Local Windows verification passed lint, typecheck, unit suites, dependency audit, secret/permission/migration gates, deterministic extension packaging, a loaded Chromium fixture suite, Docker build/health, empty/idempotent migrations, and real PostgreSQL sync/auth/revocation scenarios. The same database scenarios now live in `integration.test.ts` and CI runs them after migration.
+
+Release remains not ready for real credentials because the preview vault container is not the normative per-object CBOR/HKDF/signature/checkpoint protocol, the complete cross-platform vector set is unfinished, and Apple signing/device AutoFill evidence plus store credentials require external infrastructure. These are product/protocol gates, not hidden code-review exceptions.

@@ -9,30 +9,56 @@ jobs:
   verify:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env: { POSTGRES_DB: space_test, POSTGRES_USER: space, POSTGRES_PASSWORD: test-only-password }
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U space -d space_test" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgres://space:test-only-password@127.0.0.1:5432/space_test
+      DEVICE_TOKEN_PEPPER: ci-only-pepper-not-used-in-production
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - run: npm ci
+      - run: npm --workspace @space/api run migrate
       - run: npm run check
+      - run: npm --workspace @space/api run test:integration
+        env: { RUN_DB_INTEGRATION: "1" }
       - run: npm run security:secrets
       - run: npm run security:permissions
       - run: node scripts/check-release-version.mjs "${GITHUB_REF_NAME:-}"
       - run: node scripts/check-migrations.mjs
-      - run: bash scripts/package-extension.sh
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:chrome:e2e
+      - run: npm run release:extension
+      - run: cp artifacts/space-chrome.zip.sha256 /tmp/space-chrome.first.sha256
+      - run: npm run release:extension && cmp /tmp/space-chrome.first.sha256 artifacts/space-chrome.zip.sha256
       - run: test -f artifacts/space-chrome.zip.sha256
+  container:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with: { context: ., file: apps/api/Dockerfile, push: false, tags: "space-api:rc" }
   ios:
     runs-on: macos-15
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - run: brew install xcodegen
       - run: bash scripts/ios-build-gate.sh
   release-status:
     if: always()
-    needs: [verify, ios]
+    needs: [verify, container, ios]
     runs-on: ubuntu-24.04
     steps:
       - name: Require every gate
-        env: { VERIFY: "${{ needs.verify.result }}", IOS: "${{ needs.ios.result }}" }
-        run: test "$VERIFY" = success && test "$IOS" = success
+        env: { VERIFY: "${{ needs.verify.result }}", CONTAINER: "${{ needs.container.result }}", IOS: "${{ needs.ios.result }}" }
+        run: test "$VERIFY" = success && test "$CONTAINER" = success && test "$IOS" = success

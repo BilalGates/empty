@@ -27,12 +27,13 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - run: npm ci
+      - run: npm --workspace @space/api run migrate
       - run: npm run check
+      - run: npm --workspace @space/api run test:integration
+        env: { RUN_DB_INTEGRATION: "1" }
       - run: npm run security:secrets
       - run: npm run security:permissions
       - run: node scripts/check-migrations.mjs
-      - run: npm --workspace apps/api run migrate
-      - run: npm --workspace apps/api test
   container:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -40,10 +41,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
       - uses: docker/build-push-action@v6
-        with: { context: apps/api, push: false, tags: "space-api:ci" }
+        with: { context: ., file: apps/api/Dockerfile, push: false, tags: "space-api:ci" }
   ios:
     runs-on: macos-15
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - run: brew install xcodegen
       - run: bash scripts/ios-build-gate.sh
