@@ -29,6 +29,9 @@ logins, a concealed detail view, 60-second local-only clipboard copies, and imme
 refresh of AutoFill identities after a confirmed encrypted save. Moving the app out of
 the foreground locks the model, dismisses secret-entry sheets, and covers the UI for the
 app switcher.
+Chrome CSV import uses the system file picker, rejects files above 5 MB, parses and
+deduplicates entirely on-device, performs one confirmed encrypted save, and reminds the
+user to delete the plaintext source file.
 
 The host app supports local vault creation, biometric unlock, adding and deleting
 logins, a concealed detail view, 60-second local-only clipboard copies, and immediate

@@ -6,6 +6,11 @@ import SpaceShared
 @MainActor
 @Observable
 final class VaultViewModel {
+    struct ImportSummary: Equatable {
+        let imported: Int
+        let duplicates: Int
+        let invalid: Int
+    }
     enum State: Equatable { case locked, unlocking, unlocked, failed(String) }
     enum SyncState: Equatable { case notConfigured, checking, connected, failed }
 
@@ -128,6 +133,44 @@ final class VaultViewModel {
         await persist(
             credentials.filter { $0.id != id },
             reason: "Delete this login from your vault"
+        )
+    }
+
+    func importChromeCSV(fileURL: URL) async -> ImportSummary? {
+        let parsed: ChromeImportResult
+        do {
+            parsed = try await Task.detached(priority: .userInitiated) {
+                try ChromeCSVImporter.parse(fileURL: fileURL)
+            }.value
+        } catch {
+            mutationError = "The CSV could not be read. Export it again from Chrome and retry."
+            return nil
+        }
+        var keys = Set(credentials.map {
+            "\($0.serviceIdentifier)\u{0}\($0.username)\u{0}\($0.password)"
+        })
+        var imported: [VaultCredential] = []
+        var existingDuplicates = 0
+        for candidate in parsed.accepted {
+            let key = "\(candidate.serviceIdentifier)\u{0}\(candidate.username)\u{0}\(candidate.password)"
+            guard keys.insert(key).inserted else { existingDuplicates += 1; continue }
+            imported.append(VaultCredential(
+                title: candidate.title,
+                serviceIdentifier: candidate.serviceIdentifier,
+                username: candidate.username,
+                password: candidate.password
+            ))
+        }
+        if !imported.isEmpty {
+            guard await persist(
+                credentials + imported,
+                reason: "Import these logins into your vault"
+            ) else { return nil }
+        }
+        return ImportSummary(
+            imported: imported.count,
+            duplicates: parsed.duplicates + existingDuplicates,
+            invalid: parsed.issues.count
         )
     }
 

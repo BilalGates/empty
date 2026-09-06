@@ -1,10 +1,13 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct ContentView: View {
     let model: VaultViewModel
     @Environment(\.scenePhase) private var scenePhase
     @State private var showingSyncSetup = false
     @State private var showingCredentialEditor = false
+    @State private var showingImporter = false
+    @State private var importResultMessage: String?
 
     var body: some View {
         NavigationStack {
@@ -65,6 +68,9 @@ struct ContentView: View {
                             Button("Add login", systemImage: "plus") {
                                 showingCredentialEditor = true
                             }
+                            Button("Import Chrome CSV", systemImage: "square.and.arrow.down") {
+                                showingImporter = true
+                            }
                             Button("Lock", systemImage: "lock") { model.lock() }
                         }
                     case .unlocking:
@@ -90,11 +96,35 @@ struct ContentView: View {
         .sheet(isPresented: $showingCredentialEditor) {
             CredentialEditorView(model: model)
         }
+        .fileImporter(
+            isPresented: $showingImporter,
+            allowedContentTypes: [.commaSeparatedText, .plainText],
+            allowsMultipleSelection: false
+        ) { result in
+            guard case .success(let urls) = result, let url = urls.first else { return }
+            Task {
+                if let summary = await model.importChromeCSV(fileURL: url) {
+                    importResultMessage = "\(summary.imported) imported, \(summary.duplicates) duplicates, \(summary.invalid) invalid. Delete the original CSV securely."
+                } else {
+                    importResultMessage = model.mutationError ?? "The CSV could not be imported."
+                }
+            }
+        }
+        .alert("Import finished", isPresented: Binding(
+            get: { importResultMessage != nil },
+            set: { if !$0 { importResultMessage = nil } }
+        )) {
+            Button("OK") { importResultMessage = nil }
+        } message: {
+            Text(importResultMessage ?? "")
+        }
         .task { await model.refreshSyncState() }
         .onChange(of: scenePhase) { _, phase in
             if phase != .active {
                 showingCredentialEditor = false
                 showingSyncSetup = false
+                showingImporter = false
+                importResultMessage = nil
                 model.lock()
             }
         }
