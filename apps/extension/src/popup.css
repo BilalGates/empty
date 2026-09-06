@@ -23,5 +23,12 @@ summary { display: flex; min-height: 40px; align-items: center; cursor: pointer;
 .generator-row { display: flex; align-items: center; gap: 8px; margin: 12px 0 8px; }
 output { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: ui-monospace, monospace; }
 #fill-generated { width: 100%; }
+form { display: grid; gap: 12px; margin-top: 14px; }
+label { display: grid; gap: 5px; color: GrayText; font-size: 13px; }
+input { width: 100%; min-height: 40px; border: 1px solid color-mix(in srgb, CanvasText 24%, transparent); border-radius: 6px; padding: 8px 10px; color: CanvasText; background: Canvas; font: inherit; }
+input:focus-visible { outline: 3px solid Highlight; outline-offset: 1px; }
+.form-error { min-height: 1.45em; margin: 0; color: #b42318; font-size: 13px; }
+.text-button { width: 100%; margin-top: 12px; border-color: transparent; color: GrayText; background: transparent; }
+.recovery-key { display: block; margin: 14px 0; padding: 10px; overflow-wrap: anywhere; user-select: all; font-family: ui-monospace, monospace; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }

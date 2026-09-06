@@ -1,7 +1,9 @@
 import { isAutofillAllowed, normalizeOrigin, originsMatch } from "./origin.js";
 import { isMessage } from "./protocol.js";
+import { createEncryptedVault, unlockWithPassword, updateEncryptedVault } from "@space/core";
 
 const SESSION_TTL_MS = 60_000;
+const STORAGE_KEY = "encryptedVault";
 let session = null;
 let formStates = new Map();
 
@@ -16,6 +18,19 @@ function publicCredentials(origin) {
   }
   return session.credentials.filter((item) => item.origins.some((candidate) => originsMatch(candidate, origin)))
     .map(({ id, label, username }) => ({ id, label, username }));
+}
+
+const credentialIndex = (document) => document.items
+  .filter((item) => item.kind === "password" && !item.deletedAt)
+  .map((item) => ({ id: item.id, label: item.title, username: item.username, password: item.password, origins: item.origins }));
+
+function openSession(document, password) {
+  session = { document, password, credentials: credentialIndex(document), expiresAt: performance.now() + SESSION_TTL_MS };
+}
+
+async function readStoredVault() {
+  const stored = await chrome.storage.local.get(STORAGE_KEY);
+  return stored[STORAGE_KEY] ?? null;
 }
 
 async function ensureContent(tabId) {
@@ -38,16 +53,52 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 async function handle(message) {
+  if (message.type === "SPACE_LOCK") {
+    session = null;
+    return { ok: true };
+  }
+  if (message.type === "SPACE_CREATE_VAULT") {
+    if (await readStoredVault()) return { ok: false, error: "vault-exists" };
+    const now = new Date().toISOString();
+    const document = { formatVersion: 1, vaultId: crypto.randomUUID(), revision: 0, createdAt: now, updatedAt: now, groups: [], items: [] };
+    const created = createEncryptedVault(document, message.password);
+    await chrome.storage.local.set({ [STORAGE_KEY]: created.vault });
+    openSession(document, message.password);
+    return { ok: true, recoveryKey: created.recoveryKey };
+  }
+  if (message.type === "SPACE_UNLOCK") {
+    const vault = await readStoredVault();
+    if (!vault) return { ok: false, error: "vault-missing" };
+    try {
+      const document = unlockWithPassword(vault, message.password);
+      openSession(document, message.password);
+      return { ok: true };
+    } catch {
+      return { ok: false, error: "invalid-credentials" };
+    }
+  }
   if (!isAutofillAllowed(message.origin)) return { ok: false, state: "blocked", reason: "unsafe-origin" };
   const tab = await chrome.tabs.get(message.tabId);
   if (!tab.url || !originsMatch(tab.url, message.origin)) return { ok: false, state: "blocked", reason: "origin-mismatch" };
   if (message.type === "SPACE_GET_STATE") {
     const form = await ensureContent(message.tabId).catch(() => ({ kind: "none", usernameCount: 0, passwordCount: 0 }));
     const credentials = publicCredentials(message.origin);
-    if (credentials === null) return { ok: true, state: "locked", form };
+    if (credentials === null) return { ok: true, state: "locked", hasVault: Boolean(await readStoredVault()), form };
     return { ok: true, state: credentials.length ? "populated" : "empty", credentials, form };
   }
   if (message.type === "SPACE_SCAN") return { ok: true, ...(await ensureContent(message.tabId)) };
+  if (message.type === "SPACE_ADD_CREDENTIAL") {
+    if (!session || performance.now() >= session.expiresAt) { session = null; return { ok: false, error: "locked" }; }
+    const now = new Date().toISOString();
+    const item = { id: crypto.randomUUID(), kind: "password", title: message.title, origins: [normalizeOrigin(message.origin)], username: message.username, password: message.password, favorite: false, createdAt: now, updatedAt: now, version: 1 };
+    const document = { ...session.document, revision: session.document.revision + 1, updatedAt: now, items: [...session.document.items, item] };
+    const vault = await readStoredVault();
+    if (!vault) { session = null; return { ok: false, error: "vault-missing" }; }
+    const updated = updateEncryptedVault(vault, session.password, document);
+    await chrome.storage.local.set({ [STORAGE_KEY]: updated });
+    openSession(document, session.password);
+    return { ok: true, credentialId: item.id };
+  }
   if (message.type === "SPACE_FILL_GENERATED") {
     await ensureContent(message.tabId);
     return chrome.tabs.sendMessage(message.tabId, { type: "SPACE_CONTENT_FILL", requestId: crypto.randomUUID(),

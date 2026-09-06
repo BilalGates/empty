@@ -6,7 +6,7 @@ const manifest = JSON.parse(await readFile(new URL("../manifest.json", import.me
 
 test("uses Manifest V3 with the minimum explicit permissions", () => {
   assert.equal(manifest.manifest_version, 3);
-  assert.deepEqual(manifest.permissions, ["activeTab", "scripting"]);
+  assert.deepEqual(manifest.permissions, ["activeTab", "scripting", "storage"]);
   assert.equal("host_permissions" in manifest, false);
   assert.equal("content_scripts" in manifest, false);
   assert.equal(manifest.background.type, "module");

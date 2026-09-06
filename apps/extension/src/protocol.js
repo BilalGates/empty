@@ -4,6 +4,16 @@ const origin = (value) => typeof value === "string" && value.length <= 2048;
 export function isMessage(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   switch (value.type) {
+    case "SPACE_CREATE_VAULT":
+    case "SPACE_UNLOCK":
+      return typeof value.password === "string" && value.password.length >= 12 && value.password.length <= 1024;
+    case "SPACE_LOCK":
+      return true;
+    case "SPACE_ADD_CREDENTIAL":
+      return Number.isSafeInteger(value.tabId) && value.tabId >= 0 && origin(value.origin) &&
+        typeof value.title === "string" && value.title.length >= 1 && value.title.length <= 256 &&
+        typeof value.username === "string" && value.username.length <= 1024 &&
+        typeof value.password === "string" && value.password.length >= 1 && value.password.length <= 4096;
     case "SPACE_GET_STATE":
     case "SPACE_SCAN":
       return Number.isSafeInteger(value.tabId) && value.tabId >= 0 && origin(value.origin);

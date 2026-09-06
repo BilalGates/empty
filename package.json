@@ -12,23 +12,27 @@
   },
   "scripts": {
     "build": "npm run build --workspaces --if-present",
-    "test": "vitest run --exclude apps/extension/test/** && npm test --workspace @space/extension",
+    "test": "vitest run --maxWorkers=1 --exclude apps/extension/test/** && npm test --workspace @space/extension",
     "test:coverage": "vitest run --coverage",
+    "test:chrome:e2e": "npm run build --workspace @space/extension && node tests/chrome-extension-e2e.mjs",
     "lint": "eslint .",
     "typecheck": "tsc -b",
     "check": "npm run lint && npm run typecheck && npm test && npm run build",
-    "release:extension": "npm run package --workspace @space/extension",
+    "release:extension": "npm run build --workspace @space/extension && node scripts/package-extension.mjs",
     "security:secrets": "node scripts/secret-scan.mjs",
     "security:permissions": "node scripts/check-extension-permissions.mjs"
   },
   "devDependencies": {
     "@eslint/js": "9.35.0",
     "@types/node": "22.18.1",
+    "@types/yazl": "^3.3.0",
     "@vitest/coverage-v8": "^3.2.7",
     "eslint": "9.35.0",
     "globals": "16.3.0",
+    "playwright": "^1.63.0",
     "typescript": "5.9.2",
     "typescript-eslint": "8.42.0",
-    "vitest": "^3.2.7"
+    "vitest": "^3.2.7",
+    "yazl": "^3.3.1"
   }
 }

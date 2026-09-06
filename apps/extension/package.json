@@ -2,6 +2,7 @@
   "name": "@space/extension",
   "private": true,
   "type": "module",
+  "dependencies": { "@space/core": "0.1.0" },
   "scripts": {
     "build": "node build.mjs",
     "test": "node --test test/*.test.js",

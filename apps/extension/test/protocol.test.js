@@ -4,6 +4,9 @@ import { isMessage } from "../src/protocol.js";
 
 test("accepts the bounded protocol and rejects unknown or oversized payloads", () => {
   assert.equal(isMessage({ type: "SPACE_GET_STATE", tabId: 4, origin: "https://example.com" }), true);
+  assert.equal(isMessage({ type: "SPACE_UNLOCK", password: "secure phrase" }), true);
+  assert.equal(isMessage({ type: "SPACE_UNLOCK", password: "short" }), false);
+  assert.equal(isMessage({ type: "SPACE_ADD_CREDENTIAL", tabId: 4, origin: "https://example.com", title: "Example", username: "person", password: "value" }), true);
   assert.equal(isMessage({ type: "SPACE_FILL", tabId: 4, origin: "https://example.com", credentialId: "x" }), true);
   assert.equal(isMessage({ type: "SPACE_FILL", tabId: 4, origin: "https://example.com", credentialId: "" }), false);
   assert.equal(isMessage({ type: "SPACE_CONTENT_FILL", requestId: "x", origin: "https://example.com", credential: { username: "u", password: "p" } }), true);
