@@ -7,9 +7,11 @@ import SpaceShared
 @Observable
 final class VaultViewModel {
     enum State: Equatable { case locked, unlocking, unlocked, failed(String) }
+    enum SyncState: Equatable { case notConfigured, checking, connected, failed }
 
     private(set) var state: State = .locked
     private(set) var credentials: [VaultCredential] = []
+    private(set) var syncState: SyncState = .notConfigured
     private var store: EncryptedVaultStore?
 
     func unlock() async {
@@ -55,6 +57,45 @@ final class VaultViewModel {
     func lock() {
         credentials.removeAll(keepingCapacity: false)
         state = .locked
+    }
+
+    func refreshSyncState() async {
+        do {
+            let saved = try SpaceEnvironment.makeDeviceSessionStore().load()
+            syncState = .checking
+            let client = SpaceSyncClient(configuration: saved)
+            _ = try await client.verifyIdentity(
+                expectedVaultID: SpaceEnvironment.vaultIdentity()
+            )
+            syncState = .connected
+        } catch DeviceSessionStoreError.unavailable {
+            syncState = .notConfigured
+        } catch {
+            syncState = .failed
+        }
+    }
+
+    func connectSync(endpoint: String, deviceToken: String) async -> Bool {
+        syncState = .checking
+        do {
+            guard let url = URL(string: endpoint.trimmingCharacters(in: .whitespacesAndNewlines)) else {
+                throw SpaceSyncError.insecureEndpoint
+            }
+            let configuration = try SpaceDeviceSession(
+                baseURL: url,
+                deviceToken: deviceToken.trimmingCharacters(in: .whitespacesAndNewlines)
+            )
+            let client = SpaceSyncClient(configuration: configuration)
+            _ = try await client.verifyIdentity(
+                expectedVaultID: SpaceEnvironment.vaultIdentity()
+            )
+            try SpaceEnvironment.makeDeviceSessionStore().save(configuration)
+            syncState = .connected
+            return true
+        } catch {
+            syncState = .failed
+            return false
+        }
     }
 
     private func refreshIdentityStore() async throws {

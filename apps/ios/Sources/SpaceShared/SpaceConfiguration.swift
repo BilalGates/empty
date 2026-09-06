@@ -8,6 +8,8 @@ public enum SpaceConfiguration {
     public static let keychainAccount = "device-unlock-key"
     public static let vaultIdentityService = "com.space.vault-identity.v1"
     public static let vaultIdentityAccount = "active-vault"
+    public static let deviceSessionService = "com.space.device-session.v1"
+    public static let deviceSessionAccount = "sync-device"
 
     public static func sharedContainerURL(
         fileManager: FileManager = .default
