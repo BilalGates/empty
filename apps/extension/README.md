@@ -7,7 +7,7 @@ Manifest V3 implementation for a local encrypted preview vault and explicit, ori
 - Exact normalized origins are compared immediately before listing and filling; subdomains, lookalikes, scheme changes, and non-default ports do not match.
 - Filling is limited to HTTPS, plus localhost/127.0.0.1 for development.
 - The content script never receives a vault or credential list. A fill message contains only the selected username/password and a bounded request id.
-- Only the encrypted vault container is written to `chrome.storage.local`; plaintext secrets and the master password are never persisted. The unlocked background session is memory-only, expires after 60 seconds of inactivity, and is cleared when the worker suspends.
+- Only the encrypted vault container is written to persistent `chrome.storage.local`. The unlocked session uses Chrome's memory-only `storage.session`, is restricted to trusted extension contexts, expires after five minutes of inactivity, and is cleared on manual lock, browser restart, extension reload, update, or disable. This avoids repeating Argon2 after normal MV3 worker suspension without writing plaintext to disk.
 - Signup and password-change forms require a separate confirmation flow and are not filled automatically. Iframes are not injected.
 - Runtime messages use a small validated allowlist. Extension-page requests are accepted only from this extension; page reports must come from a Chrome tab.
 - The build bundles local source only. There is no remote code, analytics, or externally loaded asset.

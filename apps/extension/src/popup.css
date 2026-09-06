@@ -21,6 +21,8 @@ header h1 { margin: 0; font-size: 18px; letter-spacing: -.02em; }
 .text-button.inline { width: auto; margin: 0; }
 .revealed-password { display: block; margin-top: 8px; overflow-wrap: anywhere; user-select: all; }
 .feedback { min-height: 1.45em; margin: 8px 0 0; color: GrayText; font-size: 13px; }
+.import-result { margin-top: 10px; }
+.import-result p { margin: 0 0 8px; }
 button { min-height: 40px; border: 1px solid CanvasText; border-radius: 8px; padding: 8px 12px; color: Canvas; background: CanvasText; font: inherit; cursor: pointer; }
 button:focus-visible, summary:focus-visible { outline: 3px solid Highlight; outline-offset: 2px; }
 button:disabled { opacity: .55; cursor: default; }

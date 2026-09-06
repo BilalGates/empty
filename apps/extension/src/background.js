@@ -1,18 +1,43 @@
 import { isAutofillAllowed, normalizeOrigin, originsMatch } from "./origin.js";
 import { isMessage } from "./protocol.js";
-import { createEncryptedVault, unlockWithPassword, updateEncryptedVault } from "@space/core";
+import { createEncryptedVault, importChromeCsv, unlockWithPassword, updateEncryptedVault } from "@space/core";
 
-const SESSION_TTL_MS = 60_000;
+const SESSION_TTL_MS = 5 * 60_000;
 const STORAGE_KEY = "encryptedVault";
+const SESSION_KEY = "unlockedSession";
 let session = null;
 let formStates = new Map();
+let pendingImport = null;
 
 function extensionSender(sender) {
   return typeof sender.url === "string" && sender.url.startsWith(chrome.runtime.getURL(""));
 }
 
+void chrome.storage.session.setAccessLevel({ accessLevel: "TRUSTED_CONTEXTS" });
+
+async function restoreSession() {
+  if (session && Date.now() < session.expiresAt) return;
+  session = null;
+  const stored = (await chrome.storage.session.get(SESSION_KEY))[SESSION_KEY];
+  if (!stored || typeof stored !== "object" || !Number.isSafeInteger(stored.expiresAt) || Date.now() >= stored.expiresAt || typeof stored.password !== "string" || !stored.document) {
+    await chrome.storage.session.remove(SESSION_KEY); return;
+  }
+  session = { document: stored.document, password: stored.password, credentials: credentialIndex(stored.document), expiresAt: stored.expiresAt };
+}
+
+async function persistSession() {
+  if (!session) { await chrome.storage.session.remove(SESSION_KEY); return; }
+  await chrome.storage.session.set({ [SESSION_KEY]: { document: session.document, password: session.password, expiresAt: session.expiresAt } });
+}
+
+async function touchSession() {
+  if (!session) return;
+  session.expiresAt = Date.now() + SESSION_TTL_MS;
+  await persistSession();
+}
+
 function publicCredentials(origin) {
-  if (!session || performance.now() >= session.expiresAt) {
+  if (!session || Date.now() >= session.expiresAt) {
     session = null;
     return null;
   }
@@ -21,7 +46,7 @@ function publicCredentials(origin) {
 }
 
 function publicIndex() {
-  if (!session || performance.now() >= session.expiresAt) {
+  if (!session || Date.now() >= session.expiresAt) {
     session = null;
     return null;
   }
@@ -32,8 +57,9 @@ const credentialIndex = (document) => document.items
   .filter((item) => item.kind === "password" && !item.deletedAt)
   .map((item) => ({ id: item.id, label: item.title, username: item.username, password: item.password, origins: item.origins }));
 
-function openSession(document, password) {
-  session = { document, password, credentials: credentialIndex(document), expiresAt: performance.now() + SESSION_TTL_MS };
+async function openSession(document, password) {
+  session = { document, password, credentials: credentialIndex(document), expiresAt: Date.now() + SESSION_TTL_MS };
+  await persistSession();
 }
 
 async function readStoredVault() {
@@ -61,8 +87,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 async function handle(message) {
+  await restoreSession();
   if (message.type === "SPACE_LOCK") {
     session = null;
+    pendingImport = null;
+    await persistSession();
     return { ok: true };
   }
   if (message.type === "SPACE_CREATE_VAULT") {
@@ -71,7 +100,7 @@ async function handle(message) {
     const document = { formatVersion: 1, vaultId: crypto.randomUUID(), revision: 0, createdAt: now, updatedAt: now, groups: [], items: [] };
     const created = createEncryptedVault(document, message.password);
     await chrome.storage.local.set({ [STORAGE_KEY]: created.vault });
-    openSession(document, message.password);
+    await openSession(document, message.password);
     return { ok: true, recoveryKey: created.recoveryKey };
   }
   if (message.type === "SPACE_UNLOCK") {
@@ -79,7 +108,7 @@ async function handle(message) {
     if (!vault) return { ok: false, error: "vault-missing" };
     try {
       const document = unlockWithPassword(vault, message.password);
-      openSession(document, message.password);
+      await openSession(document, message.password);
       return { ok: true };
     } catch {
       return { ok: false, error: "invalid-credentials" };
@@ -98,12 +127,42 @@ async function handle(message) {
     const index = publicIndex();
     const selected = index && session.credentials.find((item) => item.id === message.credentialId);
     if (!selected) return { ok: false, error: "credential-unavailable" };
-    session.expiresAt = performance.now() + SESSION_TTL_MS;
+    await touchSession();
     return { ok: true, username: selected.username, password: selected.password };
+  }
+  if (message.type === "SPACE_PREVIEW_IMPORT") {
+    const index = publicIndex();
+    if (!index) return { ok: false, error: "locked" };
+    try {
+      const parsed = importChromeCsv(message.csv);
+      const existing = new Set(session.credentials.flatMap((item) =>
+        item.origins.map((origin) => `${origin}\u0000${item.username}\u0000${item.password}`)
+      ));
+      const accepted = parsed.accepted.filter((item) => {
+        const candidate = `${normalizeOrigin(item.url)}\u0000${item.username}\u0000${item.password}`;
+        if (existing.has(candidate)) return false;
+        existing.add(candidate); return true;
+      });
+      const existingDuplicates = parsed.accepted.length - accepted.length;
+      pendingImport = { token: crypto.randomUUID(), accepted, expiresAt: performance.now() + 120_000 };
+      return { ok: true, token: pendingImport.token, accepted: accepted.length, duplicates: parsed.duplicates.length + existingDuplicates, issues: parsed.issues.slice(0, 100), issueCount: parsed.issues.length };
+    } catch { pendingImport = null; return { ok: false, error: "invalid-import" }; }
+  }
+  if (message.type === "SPACE_COMMIT_IMPORT") {
+    if (!session || !pendingImport || pendingImport.token !== message.token || performance.now() >= pendingImport.expiresAt) { pendingImport = null; return { ok: false, error: "import-expired" }; }
+    const now = new Date().toISOString();
+    const imported = pendingImport.accepted.map((item) => ({ id: crypto.randomUUID(), kind: "password", title: item.title, origins: [normalizeOrigin(item.url)], username: item.username, password: item.password, ...(item.note ? { notes: item.note } : {}), favorite: false, createdAt: now, updatedAt: now, version: 1 }));
+    const document = { ...session.document, revision: session.document.revision + 1, updatedAt: now, items: [...session.document.items, ...imported] };
+    const vault = await readStoredVault();
+    if (!vault) { session = null; pendingImport = null; return { ok: false, error: "vault-missing" }; }
+    const updated = updateEncryptedVault(vault, session.password, document);
+    await chrome.storage.local.set({ [STORAGE_KEY]: updated });
+    pendingImport = null; await openSession(document, session.password);
+    return { ok: true, imported: imported.length };
   }
   if (message.type === "SPACE_SCAN") return { ok: true, ...(await ensureContent(message.tabId)) };
   if (message.type === "SPACE_ADD_CREDENTIAL") {
-    if (!session || performance.now() >= session.expiresAt) { session = null; return { ok: false, error: "locked" }; }
+    if (!session || Date.now() >= session.expiresAt) { session = null; return { ok: false, error: "locked" }; }
     const now = new Date().toISOString();
     const item = { id: crypto.randomUUID(), kind: "password", title: message.title, origins: [normalizeOrigin(message.origin)], username: message.username, password: message.password, favorite: false, createdAt: now, updatedAt: now, version: 1 };
     const document = { ...session.document, revision: session.document.revision + 1, updatedAt: now, items: [...session.document.items, item] };
@@ -111,7 +170,7 @@ async function handle(message) {
     if (!vault) { session = null; return { ok: false, error: "vault-missing" }; }
     const updated = updateEncryptedVault(vault, session.password, document);
     await chrome.storage.local.set({ [STORAGE_KEY]: updated });
-    openSession(document, session.password);
+    await openSession(document, session.password);
     return { ok: true, credentialId: item.id };
   }
   if (message.type === "SPACE_FILL_GENERATED") {
@@ -125,11 +184,12 @@ async function handle(message) {
   await ensureContent(message.tabId);
   const response = await chrome.tabs.sendMessage(message.tabId, { type: "SPACE_CONTENT_FILL", requestId: crypto.randomUUID(),
     origin: message.origin, credential: { username: selected.username, password: selected.password } });
-  if (response?.ok) session.expiresAt = performance.now() + SESSION_TTL_MS;
+  if (response?.ok) await touchSession();
   return response;
 }
 
 chrome.runtime.onSuspend.addListener(() => {
   session = null;
+  pendingImport = null;
   formStates.clear();
 });

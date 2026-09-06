@@ -71,9 +71,32 @@ try {
 
   await page.goto(`${baseUrl}/traditional-login.html`);
   await page.bringToFront();
-  const traditional = await command(worker, page, { type: 'SPACE_CONTENT_SCAN' });
+  const cdp = await context.newCDPSession(control);
+  const targets = await cdp.send('Target.getTargets');
+  const workerTarget = targets.targetInfos.find((target) => target.type === 'service_worker' && target.url.startsWith(`chrome-extension://${extensionId}/`));
+  assert(workerTarget, 'Extension service-worker target was not found');
+  await cdp.send('Target.closeTarget', { targetId: workerTarget.targetId });
+  const restoredState = await control.evaluate(async ({ origin: currentOrigin }) => {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    return chrome.runtime.sendMessage({ type: 'SPACE_GET_STATE', tabId: tab.id, origin: currentOrigin });
+  }, { origin: new URL(page.url()).origin });
+  assert(restoredState.ok && restoredState.state === 'empty', 'Memory-only unlocked session did not survive normal MV3 worker termination');
+  const traditional = await command(control, page, { type: 'SPACE_CONTENT_SCAN' });
   assert(traditional.kind === 'login', 'Traditional login was not detected');
   const origin = new URL(page.url()).origin;
+  const importedPassword = ['imported', 'fixture', 'value'].join('-');
+  const preview = await control.evaluate(async ({ origin: currentOrigin, csv }) => {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    return chrome.runtime.sendMessage({ type: 'SPACE_PREVIEW_IMPORT', tabId: tab.id, origin: currentOrigin, csv });
+  }, { origin, csv: `name,url,username,password\nOther,https://other.example,other@example.com,${importedPassword}` });
+  assert(preview.ok && preview.accepted === 1 && preview.duplicates === 0, 'CSV import preview failed');
+  const committedImport = await control.evaluate(async ({ origin: currentOrigin, token }) => {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    return chrome.runtime.sendMessage({ type: 'SPACE_COMMIT_IMPORT', tabId: tab.id, origin: currentOrigin, token });
+  }, { origin, token: preview.token });
+  assert(committedImport.ok && committedImport.imported === 1, 'CSV import commit failed');
+  const afterImportStorage = await control.evaluate(() => chrome.storage.local.get('encryptedVault'));
+  assert(!JSON.stringify(afterImportStorage).includes(importedPassword), 'Imported plaintext leaked to extension storage');
   const added = await control.evaluate(async ({ origin: currentOrigin }) => {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     return chrome.runtime.sendMessage({ type: 'SPACE_ADD_CREDENTIAL', tabId: tab.id, origin: currentOrigin, title: 'Fixture', username: 'person@example.com', password: 'test-value' });
@@ -83,9 +106,9 @@ try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     return chrome.runtime.sendMessage({ type: 'SPACE_GET_STATE', tabId: tab.id, origin: currentOrigin });
   }, { origin });
-  assert(state.state === 'populated' && state.credentials.length === 1, 'Saved credential was not indexed');
+  assert(state.state === 'populated' && state.credentials.length === 1 && state.allCredentials.length === 2, 'Saved/imported credentials were not indexed correctly');
   assert(!('password' in state.credentials[0]), 'Credential list exposed a password');
-  assert(state.allCredentials.length === 1 && !('password' in state.allCredentials[0]), 'Search index exposed a password');
+  assert(state.allCredentials.every((credential) => !('password' in credential)), 'Search index exposed a password');
   const explicitSecret = await control.evaluate(async ({ origin: currentOrigin, credentialId }) => {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     return chrome.runtime.sendMessage({ type: 'SPACE_GET_SECRET', tabId: tab.id, origin: currentOrigin, credentialId });
@@ -98,7 +121,7 @@ try {
   assert(fill.ok, 'Traditional login was not filled');
   assert(await page.locator('input[type=email]').inputValue() === 'person@example.com', 'Username fill failed');
   assert(await page.locator('input[type=password]').inputValue() === 'test-value', 'Password fill failed');
-  const rejected = await command(worker, page, {
+  const rejected = await command(control, page, {
     type: 'SPACE_CONTENT_FILL', requestId: crypto.randomUUID(), origin: 'https://lookalike.example',
     credential: { username: 'attacker', password: 'attacker' }
   });
@@ -106,23 +129,23 @@ try {
 
   await page.goto(`${baseUrl}/dynamic-login.html`);
   await page.locator('#add').click();
-  const dynamic = await command(worker, page, { type: 'SPACE_CONTENT_SCAN' });
+  const dynamic = await command(control, page, { type: 'SPACE_CONTENT_SCAN' });
   assert(dynamic.kind === 'login', 'Dynamic form was not detected');
 
   await page.goto(`${baseUrl}/spa-login.html`);
   await page.locator('#navigate').click();
-  const spa = await command(worker, page, { type: 'SPACE_CONTENT_SCAN' });
+  const spa = await command(control, page, { type: 'SPACE_CONTENT_SCAN' });
   assert(spa.kind === 'login', 'SPA form was not detected');
 
   await page.goto(`${baseUrl}/signup.html`);
-  const signup = await command(worker, page, { type: 'SPACE_CONTENT_SCAN' });
+  const signup = await command(control, page, { type: 'SPACE_CONTENT_SCAN' });
   assert(signup.kind === 'signup', 'Signup was not classified');
-  const guarded = await command(worker, page, {
+  const guarded = await command(control, page, {
     type: 'SPACE_CONTENT_FILL', requestId: crypto.randomUUID(), origin: new URL(page.url()).origin,
     credential: { username: '', password: 'test-value' }
   });
   assert(guarded.error === 'confirmation-required', 'Signup fill did not require confirmation');
-  console.log('Chrome MV3 E2E passed: encrypted vault, public search index, explicit secret access, fill, dynamic, SPA, signup guard, exact-origin rejection.');
+  console.log('Chrome MV3 E2E passed: encrypted vault, in-memory session restore, local CSV import, plaintext-persistence guard, fill, dynamic, SPA, signup guard, exact-origin rejection.');
 } finally {
   if (context) await context.close();
   await new Promise((resolveClose) => server.close(resolveClose));

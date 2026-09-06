@@ -98,9 +98,36 @@ function appendVaultActions() {
     if (response?.ok) await refresh(); else { submit.disabled = false; error.textContent = response?.error === "locked" ? "Space locked. Unlock it again." : "The login could not be saved."; }
   });
   details.append(summary, form);
+  const importer = document.createElement("details");
+  const importSummary = document.createElement("summary"); importSummary.textContent = "Import from Chrome CSV";
+  const warning = document.createElement("p"); warning.className = "muted"; warning.textContent = "The file contains plaintext passwords. Space reads it locally and never uploads it.";
+  const fileField = inputField("Chrome password CSV", "file", "import-file", { required: true });
+  fileField.input.accept = ".csv,text/csv";
+  const review = document.createElement("button"); review.type = "button"; review.className = "secondary"; review.textContent = "Review import";
+  const result = document.createElement("div"); result.className = "import-result"; result.setAttribute("role", "status"); result.setAttribute("aria-live", "polite");
+  let importToken = null;
+  review.addEventListener("click", async () => {
+    const file = fileField.input.files?.[0]; result.replaceChildren(); importToken = null;
+    if (!file) { result.textContent = "Choose a CSV file first."; return; }
+    if (file.size > 5_000_000) { result.textContent = "The CSV exceeds the 5 MB import limit."; return; }
+    review.disabled = true; review.textContent = "Reviewing…";
+    const response = await chrome.runtime.sendMessage({ type: "SPACE_PREVIEW_IMPORT", ...context, csv: await file.text() });
+    review.disabled = false; review.textContent = "Review import";
+    if (!response?.ok) { result.textContent = "This CSV could not be read. Export it again from Chrome and retry."; return; }
+    importToken = response.token;
+    const summaryText = document.createElement("p"); summaryText.textContent = `${response.accepted} ready, ${response.duplicates} duplicates, ${response.issueCount} invalid.`;
+    const confirm = document.createElement("button"); confirm.type = "button"; confirm.textContent = `Import ${response.accepted} credentials`; confirm.disabled = response.accepted === 0;
+    confirm.addEventListener("click", async () => {
+      confirm.disabled = true; const committed = await chrome.runtime.sendMessage({ type: "SPACE_COMMIT_IMPORT", ...context, token: importToken });
+      if (committed?.ok) { result.textContent = `${committed.imported} credentials imported. Delete the original CSV securely.`; setTimeout(refresh, 1200); }
+      else { result.textContent = "The review expired or Space locked. Review the file again."; }
+    });
+    result.append(summaryText, confirm);
+  });
+  importer.append(importSummary, warning, fileField.label, review, result);
   const lock = document.createElement("button"); lock.type = "button"; lock.className = "text-button"; lock.textContent = "Lock Space";
   lock.addEventListener("click", async () => { await chrome.runtime.sendMessage({ type: "SPACE_LOCK" }); await refresh(); });
-  content.append(details, lock);
+  content.append(details, importer, lock);
 }
 
 function regeneratePassword() {
