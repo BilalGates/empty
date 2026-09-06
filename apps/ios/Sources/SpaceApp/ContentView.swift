@@ -4,6 +4,7 @@ struct ContentView: View {
     let model: VaultViewModel
     @Environment(\.scenePhase) private var scenePhase
     @State private var showingSyncSetup = false
+    @State private var showingCredentialEditor = false
 
     var body: some View {
         NavigationStack {
@@ -18,12 +19,27 @@ struct ContentView: View {
                 case .unlocking:
                     ProgressView("Unlocking…")
                 case .unlocked:
-                    List(model.credentials) { credential in
-                        VStack(alignment: .leading) {
-                            Text(credential.title)
-                            Text(credential.username)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                    if model.credentials.isEmpty {
+                        ContentUnavailableView {
+                            Label("No logins", systemImage: "key")
+                        } description: {
+                            Text("Add your first login to use it with AutoFill.")
+                        } actions: {
+                            Button("Add login") { showingCredentialEditor = true }
+                                .buttonStyle(.borderedProminent)
+                        }
+                    } else {
+                        List(model.credentials) { credential in
+                            NavigationLink {
+                                CredentialDetailView(credential: credential, model: model)
+                            } label: {
+                                VStack(alignment: .leading) {
+                                    Text(credential.title)
+                                    Text(credential.username)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
                         }
                     }
                 case .failed(let message):
@@ -45,7 +61,12 @@ struct ContentView: View {
                 ToolbarItem(placement: .primaryAction) {
                     switch model.state {
                     case .unlocked:
-                        Button("Lock", systemImage: "lock") { model.lock() }
+                        Menu("Vault actions", systemImage: "ellipsis.circle") {
+                            Button("Add login", systemImage: "plus") {
+                                showingCredentialEditor = true
+                            }
+                            Button("Lock", systemImage: "lock") { model.lock() }
+                        }
                     case .unlocking:
                         EmptyView()
                     default:
@@ -66,9 +87,24 @@ struct ContentView: View {
         .sheet(isPresented: $showingSyncSetup) {
             SyncSetupView(model: model)
         }
+        .sheet(isPresented: $showingCredentialEditor) {
+            CredentialEditorView(model: model)
+        }
         .task { await model.refreshSyncState() }
         .onChange(of: scenePhase) { _, phase in
-            if phase != .active { model.lock() }
+            if phase != .active {
+                showingCredentialEditor = false
+                showingSyncSetup = false
+                model.lock()
+            }
+        }
+        .overlay {
+            if scenePhase != .active {
+                Rectangle()
+                    .fill(.background)
+                    .ignoresSafeArea()
+                    .overlay { Image(systemName: "lock.fill").accessibilityLabel("Space locked") }
+            }
         }
     }
 

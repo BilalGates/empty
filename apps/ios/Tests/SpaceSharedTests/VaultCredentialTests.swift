@@ -2,6 +2,19 @@ import XCTest
 @testable import SpaceShared
 
 final class VaultCredentialTests: XCTestCase {
+    func testCanonicalServiceIdentifierAcceptsHTTPSAndLoopbackOnly() {
+        XCTAssertEqual(
+            VaultCredential.canonicalServiceIdentifier("Example.COM/login"),
+            "https://example.com"
+        )
+        XCTAssertEqual(
+            VaultCredential.canonicalServiceIdentifier("http://localhost:8080/login"),
+            "http://localhost:8080"
+        )
+        XCTAssertNil(VaultCredential.canonicalServiceIdentifier("http://example.com"))
+        XCTAssertNil(VaultCredential.canonicalServiceIdentifier("https://user:pass@example.com"))
+    }
+
     func testMatchesNormalizedExactHost() {
         let credential = VaultCredential(
             title: "Example",

@@ -10,9 +10,9 @@ Decision: **NOT READY for production credentials**
 - PostgreSQL 17 migration on an empty database and idempotent rerun.
 - Real API flows for authentication, disabled users, sync idempotency, conflicts, duplicate-item atomic rejection, pull, tombstones, and device revocation.
 - Non-root API container build, readiness, and graceful runtime behavior.
-- Loaded Manifest V3 Chromium fixtures for traditional, dynamic, SPA, signup/change guard, exact-origin rejection, encrypted local storage, lock/unlock, add, and fill.
+- Loaded Manifest V3 Chromium fixtures for traditional, dynamic, SPA, signup/change guard, exact-origin rejection, encrypted local storage, memory-only worker session restoration, local CSV import, lock/unlock, add, and fill.
 - Deterministic Chrome ZIP generated twice with the same SHA-256.
-- Every Swift source parses on Windows; CI generates the Xcode project and performs the macOS build gate.
+- Every Swift source parses on Windows; the standalone iOS sync transport also passes Windows typecheck. CI generates the Xcode project and performs the macOS build gate.
 
 ## Production blockers
 

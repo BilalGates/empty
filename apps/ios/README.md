@@ -24,4 +24,16 @@ must use HTTPS (debug builds permit loopback HTTP). The transport deliberately d
 feed remote records into the local AES-GCM cache: that remains blocked until the iOS
 XChaCha20-Poly1305/Argon2id implementation passes the shared cross-platform vectors.
 
+The host app supports local vault creation, biometric unlock, adding and deleting
+logins, a concealed detail view, 60-second local-only clipboard copies, and immediate
+refresh of AutoFill identities after a confirmed encrypted save. Moving the app out of
+the foreground locks the model, dismisses secret-entry sheets, and covers the UI for the
+app switcher.
+
+The host app supports local vault creation, biometric unlock, adding and deleting
+logins, a concealed detail view, 60-second local-only clipboard copies, and immediate
+refresh of AutoFill identities after a confirmed encrypted save. Moving the app out of
+the foreground locks the model, dismisses secret-entry sheets, and covers the UI for the
+app switcher.
+
 The checked-in project descriptor uses development bundle identifiers but no team or signing material. Follow `docs/operations/ios-signing.md` before device testing or distribution.

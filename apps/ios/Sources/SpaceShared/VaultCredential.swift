@@ -28,6 +28,24 @@ public struct VaultCredential: Codable, Identifiable, Equatable, Sendable {
         }
     }
 
+    public static func canonicalServiceIdentifier(_ value: String) -> String? {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        let candidate = trimmed.contains("://") ? trimmed : "https://\(trimmed)"
+        guard let components = URLComponents(string: candidate),
+              let host = components.host?.lowercased(),
+              !host.isEmpty,
+              components.user == nil,
+              components.password == nil,
+              ["https", "http"].contains(components.scheme?.lowercased()) else { return nil }
+        if components.scheme?.lowercased() == "http"
+            && !["localhost", "127.0.0.1", "::1"].contains(host) { return nil }
+        var origin = URLComponents()
+        origin.scheme = components.scheme?.lowercased()
+        origin.host = host
+        origin.port = components.port
+        return origin.url?.absoluteString
+    }
+
     private static func normalizedHost(_ value: String) -> String? {
         let candidate = value.contains("://") ? value : "https://\(value)"
         return URLComponents(string: candidate)?.host?
@@ -44,4 +62,3 @@ public struct VaultSnapshot: Codable, Equatable, Sendable {
         self.credentials = credentials
     }
 }
-

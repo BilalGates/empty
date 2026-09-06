@@ -12,6 +12,8 @@ final class VaultViewModel {
     private(set) var state: State = .locked
     private(set) var credentials: [VaultCredential] = []
     private(set) var syncState: SyncState = .notConfigured
+    private(set) var isSaving = false
+    private(set) var mutationError: String?
     private var store: EncryptedVaultStore?
 
     func unlock() async {
@@ -96,6 +98,61 @@ final class VaultViewModel {
             syncState = .failed
             return false
         }
+    }
+
+    func addCredential(
+        title: String,
+        serviceIdentifier: String,
+        username: String,
+        password: String
+    ) async -> Bool {
+        guard let normalizedService = VaultCredential.canonicalServiceIdentifier(serviceIdentifier),
+              !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              !password.isEmpty else {
+            mutationError = "Enter a valid website, name, and password."
+            return false
+        }
+        let credential = VaultCredential(
+            title: title.trimmingCharacters(in: .whitespacesAndNewlines),
+            serviceIdentifier: normalizedService,
+            username: username,
+            password: password
+        )
+        return await persist(
+            credentials + [credential],
+            reason: "Save this login to your vault"
+        )
+    }
+
+    func deleteCredential(id: UUID) async -> Bool {
+        await persist(
+            credentials.filter { $0.id != id },
+            reason: "Delete this login from your vault"
+        )
+    }
+
+    private func persist(_ replacement: [VaultCredential], reason: String) async -> Bool {
+        guard let store else {
+            mutationError = "Unlock the vault before changing it."
+            return false
+        }
+        isSaving = true
+        mutationError = nil
+        defer { isSaving = false }
+        do {
+            try await store.save(
+                VaultSnapshot(credentials: replacement),
+                interaction: .allowed(reason: reason)
+            )
+            credentials = replacement
+            try await refreshIdentityStore()
+            return true
+        } catch UnlockKeyStoreError.cancelled {
+            mutationError = "Authentication was cancelled."
+        } catch {
+            mutationError = "The local vault could not be updated."
+        }
+        return false
     }
 
     private func refreshIdentityStore() async throws {
