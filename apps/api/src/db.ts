@@ -1,12 +1,12 @@
 import pg from "pg";
 const { Pool } = pg;
-export function createPool(connectionString: string): pg.Pool {
+export function createPool(connectionString: string, sslMode: "disable" | "require" = "require"): pg.Pool {
   return new Pool({
     connectionString,
     max: 20,
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 5_000,
     application_name: "space-api",
-    ...(process.env.NODE_ENV === "production" ? { ssl: { rejectUnauthorized: true } } : {})
+    ...(sslMode === "require" ? { ssl: { rejectUnauthorized: true } } : {})
   });
 }

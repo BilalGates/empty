@@ -9,6 +9,12 @@ declare module "express-serve-static-core" {
 
 export const hashDeviceToken = (token: string, pepper: string): Buffer => createHmac("sha256", pepper).update(token, "utf8").digest();
 export const generateDeviceToken = (): string => `space_dt_${randomBytes(32).toString("base64url")}`;
+export const DEVICE_LOOKUP_SQL = `SELECT d.user_id, d.id AS device_id, d.vault_id, d.token_hash
+   FROM devices d
+   JOIN users u ON u.id = d.user_id
+  WHERE d.token_fingerprint = $1
+    AND d.revoked_at IS NULL
+    AND u.disabled_at IS NULL`;
 
 function readBearer(req: Request): string | undefined {
   const value = req.header("authorization");
@@ -24,12 +30,7 @@ export function deviceAuth(pool: pg.Pool, pepper: string) {
       if (!token) return void res.status(401).json({ error: "unauthorized" });
       const candidate = hashDeviceToken(token, pepper);
       const result = await pool.query<{ user_id: string; device_id: string; vault_id: string; token_hash: Buffer }>(
-        `SELECT d.user_id, d.id AS device_id, d.vault_id, d.token_hash
-           FROM devices d
-           JOIN users u ON u.id = d.user_id
-          WHERE d.token_fingerprint = $1
-            AND d.revoked_at IS NULL
-            AND u.disabled_at IS NULL`,
+        DEVICE_LOOKUP_SQL,
         [candidate.subarray(0, 16)]
       );
       const row = result.rows[0];

@@ -7,7 +7,7 @@ import { createPool } from "./db.js";
 const here = dirname(fileURLToPath(import.meta.url));
 const migrationsDir = resolve(here, "../migrations");
 const config = loadConfig();
-const pool = createPool(config.DATABASE_URL);
+const pool = createPool(config.DATABASE_URL, config.DATABASE_SSL_MODE);
 
 try {
   await pool.query("SELECT pg_advisory_lock(hashtext('space_schema_migrations'))");

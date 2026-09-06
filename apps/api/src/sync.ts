@@ -16,7 +16,7 @@ const mutationSchema = z.object({
   const tombstone = value.ciphertext === null;
   if (tombstone !== (value.nonce === null && value.wrappedKey === null && value.aad === null)) ctx.addIssue({ code: "custom", message: "tombstones must have a fully null envelope" });
 });
-const pushSchema = z.object({ mutations: z.array(mutationSchema).min(1).max(100) }).superRefine((value, ctx) => {
+export const pushSchema = z.object({ mutations: z.array(mutationSchema).min(1).max(100) }).superRefine((value, ctx) => {
   const mutationIds = new Set<string>();
   const itemIds = new Set<string>();
   value.mutations.forEach((mutation, index) => {
@@ -53,7 +53,7 @@ export function syncRouter(pool: pg.Pool): Router {
     const identity = req.device!;
     try {
       const result = await tx(pool, async (client) => {
-        const active = await client.query("SELECT 1 FROM devices WHERE id = $1 AND vault_id = $2 AND revoked_at IS NULL", [identity.deviceId, identity.vaultId]);
+        const active = await client.query("SELECT 1 FROM devices d JOIN users u ON u.id=d.user_id WHERE d.id = $1 AND d.vault_id = $2 AND d.revoked_at IS NULL AND u.disabled_at IS NULL", [identity.deviceId, identity.vaultId]);
         if (!active.rowCount) return { status: 401, body: { error: "unauthorized" } };
         await client.query("SELECT current_revision FROM vaults WHERE id = $1 FOR UPDATE", [identity.vaultId]);
 
@@ -122,7 +122,7 @@ export function syncRouter(pool: pg.Pool): Router {
     if (!parsed.success) return void res.status(400).json({ error: "invalid_request", issues: parsed.error.issues });
     const identity = req.device!;
     try {
-      const active = await pool.query("SELECT 1 FROM devices WHERE id=$1 AND vault_id=$2 AND revoked_at IS NULL", [identity.deviceId, identity.vaultId]);
+      const active = await pool.query("SELECT 1 FROM devices d JOIN users u ON u.id=d.user_id WHERE d.id=$1 AND d.vault_id=$2 AND d.revoked_at IS NULL AND u.disabled_at IS NULL", [identity.deviceId, identity.vaultId]);
       if (!active.rowCount) return void res.status(401).json({ error: "unauthorized" });
       const result = await pool.query<{
         item_id: string; item_version: string; revision: string; mutation_id: string; ciphertext: string | null; nonce: string | null; wrapped_key: string | null; aad: string | null;

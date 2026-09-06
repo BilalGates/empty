@@ -8,7 +8,7 @@ import type pino from "pino";
 import { deviceAuth } from "./auth.js";
 import { devicesRouter } from "./devices.js";
 import { syncRouter } from "./sync.js";
-export function createApp(options:{pool:pg.Pool;pepper:string;logger:pino.Logger}){
+export function createApp(options:{pool:pg.Pool;pepper:string;logger:pino.Logger}): express.Express {
  const app=express();app.disable("x-powered-by");app.set("trust proxy",1);app.use(helmet({contentSecurityPolicy:{directives:{defaultSrc:["'none'"],frameAncestors:["'none'"]}}}));
  app.use((req,res,next)=>{const supplied=req.header("x-request-id");const id=supplied?.slice(0,128) || randomUUID();res.setHeader("x-request-id",id);next();});
  app.use(pinoHttp({logger:options.logger}));

@@ -25,6 +25,7 @@ services:
       HOST: 0.0.0.0
       PORT: 3000
       DATABASE_URL: postgres://space:${POSTGRES_PASSWORD}@postgres:5432/space
+      DATABASE_SSL_MODE: ${DATABASE_SSL_MODE:-require}
       DEVICE_TOKEN_PEPPER: ${DEVICE_TOKEN_PEPPER:?set DEVICE_TOKEN_PEPPER}
       LOG_LEVEL: ${LOG_LEVEL:-info}
     depends_on:
