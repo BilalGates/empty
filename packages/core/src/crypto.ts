@@ -4,7 +4,21 @@ import type { Argon2idParameters, EncryptedVault, KeyEnvelope, VaultDocument } f
 import { assertVaultDocument, canonicalJson, ENVELOPE_VERSION, VAULT_FORMAT_VERSION } from '@space/protocol';
 import { fromBase64Url, fromUtf8, toBase64Url, utf8, wipe } from './encoding.js';
 
-export const DEFAULT_KDF = Object.freeze({ memoryKiB: 64 * 1024, iterations: 3, parallelism: 1 });
+export const DEFAULT_KDF = Object.freeze({ memoryKiB: 64 * 1024, iterations: 3, parallelism: 4 });
+
+const KDF_POLICY = Object.freeze({
+  minimumMemoryKiB: 64 * 1024,
+  maximumMemoryKiB: 1024 * 1024,
+  minimumIterations: 3,
+  maximumIterations: 10,
+  minimumParallelism: 1,
+  maximumParallelism: 16,
+  saltBytes: 16,
+  outputBytes: 32,
+  maximumPasswordBytes: 1024
+});
+const MAXIMUM_PAYLOAD_CIPHERTEXT_BYTES = 16 * 1024 * 1024 + 16;
+const WRAPPED_KEY_CIPHERTEXT_BYTES = 32 + 16;
 
 export interface KdfCost { memoryKiB: number; iterations: number; parallelism: number }
 
@@ -29,13 +43,27 @@ function payloadAad(vaultId: string, revision: number): Uint8Array {
 function derivePasswordKey(password: string, kdf: Argon2idParameters): Uint8Array {
   const normalizedPassword = password.normalize('NFC');
   if (normalizedPassword.length < 12) throw new Error('Master password must contain at least 12 characters');
-  if (kdf.memoryKiB < 19 * 1024 || kdf.iterations < 2 || kdf.parallelism < 1) throw new Error('KDF parameters below policy');
-  return argon2id(utf8(normalizedPassword), fromBase64Url(kdf.salt), {
-    m: kdf.memoryKiB,
-    t: kdf.iterations,
-    p: kdf.parallelism,
-    dkLen: 32
-  });
+  if (kdf.algorithm !== 'argon2id' || kdf.version !== 1) throw new Error('Unsupported KDF');
+  if (!Number.isSafeInteger(kdf.memoryKiB) || kdf.memoryKiB < KDF_POLICY.minimumMemoryKiB || kdf.memoryKiB > KDF_POLICY.maximumMemoryKiB ||
+      !Number.isSafeInteger(kdf.iterations) || kdf.iterations < KDF_POLICY.minimumIterations || kdf.iterations > KDF_POLICY.maximumIterations ||
+      !Number.isSafeInteger(kdf.parallelism) || kdf.parallelism < KDF_POLICY.minimumParallelism || kdf.parallelism > KDF_POLICY.maximumParallelism) {
+    throw new Error('KDF parameters outside policy');
+  }
+  const passwordBytes = utf8(normalizedPassword);
+  if (kdf.salt.length !== 22) throw new Error('Invalid KDF salt');
+  const salt = fromBase64Url(kdf.salt);
+  if (passwordBytes.length > KDF_POLICY.maximumPasswordBytes) throw new Error('Master password exceeds byte limit');
+  if (salt.length !== KDF_POLICY.saltBytes || toBase64Url(salt) !== kdf.salt) throw new Error('Invalid KDF salt');
+  try {
+    return argon2id(passwordBytes, salt, {
+      m: kdf.memoryKiB,
+      t: kdf.iterations,
+      p: kdf.parallelism,
+      dkLen: KDF_POLICY.outputBytes
+    });
+  } finally {
+    wipe(passwordBytes);
+  }
 }
 
 function encrypt(key: Uint8Array, plaintext: Uint8Array, aad: Uint8Array): { nonce: string; ciphertext: string } {
@@ -44,8 +72,18 @@ function encrypt(key: Uint8Array, plaintext: Uint8Array, aad: Uint8Array): { non
   return { nonce: toBase64Url(nonce), ciphertext: toBase64Url(ciphertext) };
 }
 
-function decrypt(key: Uint8Array, nonce: string, ciphertext: string, aad: Uint8Array): Uint8Array {
-  return xchacha20poly1305(key, fromBase64Url(nonce), aad).decrypt(fromBase64Url(ciphertext));
+function decodeCanonical(value: string, maximumBytes: number, label: string): Uint8Array {
+  if (value.length > Math.ceil(maximumBytes * 4 / 3)) throw new Error(`${label} exceeds size limit`);
+  const decoded = fromBase64Url(value);
+  if (decoded.length > maximumBytes || toBase64Url(decoded) !== value) throw new Error(`Invalid ${label}`);
+  return decoded;
+}
+
+function decrypt(key: Uint8Array, nonce: string, ciphertext: string, aad: Uint8Array, maximumCiphertextBytes = MAXIMUM_PAYLOAD_CIPHERTEXT_BYTES): Uint8Array {
+  const nonceBytes = decodeCanonical(nonce, 24, 'nonce');
+  if (nonceBytes.length !== 24) throw new Error('Invalid nonce');
+  const ciphertextBytes = decodeCanonical(ciphertext, maximumCiphertextBytes, 'ciphertext');
+  return xchacha20poly1305(key, nonceBytes, aad).decrypt(ciphertextBytes);
 }
 
 function makePasswordEnvelope(vaultKey: Uint8Array, vaultId: string, password: string, cost: KdfCost): KeyEnvelope {
@@ -95,10 +133,11 @@ function openWithKey(vault: EncryptedVault, vaultKey: Uint8Array): VaultDocument
 export function unlockWithPassword(vault: EncryptedVault, password: string): VaultDocument {
   const envelope = vault.envelopes.find(candidate => candidate.kind === 'master-password');
   if (!envelope?.kdf) throw new Error('Master-password envelope unavailable');
+  if (envelope.envelopeVersion !== ENVELOPE_VERSION || envelope.algorithm !== 'xchacha20-poly1305') throw new Error('Unable to unlock vault');
   const key = derivePasswordKey(password, envelope.kdf);
   let vaultKey: Uint8Array | undefined;
   try {
-    vaultKey = decrypt(key, envelope.nonce, envelope.ciphertext, passwordAad(vault.vaultId, envelope.kdf));
+    vaultKey = decrypt(key, envelope.nonce, envelope.ciphertext, passwordAad(vault.vaultId, envelope.kdf), WRAPPED_KEY_CIPHERTEXT_BYTES);
     return openWithKey(vault, vaultKey);
   } catch { throw new Error('Unable to unlock vault'); }
   finally { wipe(key); if (vaultKey) wipe(vaultKey); }
@@ -111,19 +150,38 @@ export function unlockWithRecoveryKey(vault: EncryptedVault, encodedRecoveryKey:
   if (recoveryKey.length !== 32) throw new Error('Invalid recovery key');
   let vaultKey: Uint8Array | undefined;
   try {
-    vaultKey = decrypt(recoveryKey, envelope.nonce, envelope.ciphertext, recoveryAad(vault.vaultId));
+    if (envelope.envelopeVersion !== ENVELOPE_VERSION || envelope.algorithm !== 'xchacha20-poly1305') throw new Error('Invalid envelope');
+    vaultKey = decrypt(recoveryKey, envelope.nonce, envelope.ciphertext, recoveryAad(vault.vaultId), WRAPPED_KEY_CIPHERTEXT_BYTES);
     return openWithKey(vault, vaultKey);
   } catch { throw new Error('Unable to recover vault'); }
   finally { wipe(recoveryKey); if (vaultKey) wipe(vaultKey); }
 }
 
+export function updateEncryptedVault(vault: EncryptedVault, password: string, document: VaultDocument): EncryptedVault {
+  assertVaultDocument(document);
+  if (document.vaultId !== vault.vaultId) throw new Error('Vault context mismatch');
+  if (document.revision <= vault.revision) throw new Error('Vault revision must increase');
+  const envelope = vault.envelopes.find(candidate => candidate.kind === 'master-password');
+  if (!envelope?.kdf) throw new Error('Master-password envelope unavailable');
+  if (envelope.envelopeVersion !== ENVELOPE_VERSION || envelope.algorithm !== 'xchacha20-poly1305') throw new Error('Unable to update vault');
+  const key = derivePasswordKey(password, envelope.kdf);
+  let vaultKey: Uint8Array | undefined;
+  try {
+    vaultKey = decrypt(key, envelope.nonce, envelope.ciphertext, passwordAad(vault.vaultId, envelope.kdf), WRAPPED_KEY_CIPHERTEXT_BYTES);
+    const payload = encrypt(vaultKey, utf8(canonicalJson(document)), payloadAad(document.vaultId, document.revision));
+    return { ...vault, revision: document.revision, ...payload };
+  } catch { throw new Error('Unable to update vault'); }
+  finally { wipe(key); if (vaultKey) wipe(vaultKey); }
+}
+
 export function changeMasterPassword(vault: EncryptedVault, oldPassword: string, newPassword: string, cost: KdfCost = DEFAULT_KDF): EncryptedVault {
   const envelope = vault.envelopes.find(candidate => candidate.kind === 'master-password');
   if (!envelope?.kdf) throw new Error('Master-password envelope unavailable');
+  if (envelope.envelopeVersion !== ENVELOPE_VERSION || envelope.algorithm !== 'xchacha20-poly1305') throw new Error('Unable to change master password');
   const oldKey = derivePasswordKey(oldPassword, envelope.kdf);
   let vaultKey: Uint8Array | undefined;
   try {
-    vaultKey = decrypt(oldKey, envelope.nonce, envelope.ciphertext, passwordAad(vault.vaultId, envelope.kdf));
+    vaultKey = decrypt(oldKey, envelope.nonce, envelope.ciphertext, passwordAad(vault.vaultId, envelope.kdf), WRAPPED_KEY_CIPHERTEXT_BYTES);
     const replacement = makePasswordEnvelope(vaultKey, vault.vaultId, newPassword, cost);
     return { ...vault, envelopes: [replacement, ...vault.envelopes.filter(candidate => candidate.kind !== 'master-password')] };
   } catch { throw new Error('Unable to change master password'); }

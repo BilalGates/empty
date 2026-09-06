@@ -1,39 +1,84 @@
 import { describe, expect, it } from 'vitest';
 import type { VaultDocument } from '@space/protocol';
-import { changeMasterPassword, createEncryptedVault, generatePassword, importChromeCsv, matchesOrigin, unlockWithPassword, unlockWithRecoveryKey } from './index.js';
+import { changeMasterPassword, createEncryptedVault, generatePassword, importChromeCsv, matchesOrigin, unlockWithPassword, unlockWithRecoveryKey, updateEncryptedVault } from './index.js';
 
-const testCost = { memoryKiB: 19 * 1024, iterations: 2, parallelism: 1 };
+const testCost = { memoryKiB: 64 * 1024, iterations: 3, parallelism: 1 };
+const yieldWorker = (): Promise<void> => new Promise(resolve => setImmediate(resolve));
 const document: VaultDocument = {
   formatVersion: 1, vaultId: 'vault-test-0001', revision: 0,
   createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z', groups: [],
   items: [{ id: 'item-0001', kind: 'password', title: 'Example', origins: ['https://example.com'], username: 'a@example.com', password: 'secret', favorite: false, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z', version: 1 }]
 };
 
-describe('vault cryptography', () => {
-  it('round trips with password and recovery key', () => {
+describe('vault cryptography', { timeout: 60_000 }, () => {
+  it('round trips with password and recovery key', async () => {
     const created = createEncryptedVault(document, 'correct horse battery staple', testCost);
+    await yieldWorker();
     expect(unlockWithPassword(created.vault, 'correct horse battery staple')).toEqual(document);
+    await yieldWorker();
     expect(unlockWithRecoveryKey(created.vault, created.recoveryKey)).toEqual(document);
     expect(() => unlockWithPassword(created.vault, 'wrong password value')).toThrow('Unable to unlock');
+    await yieldWorker();
   });
 
-  it('rewraps without changing ciphertext', () => {
+  it('rewraps without changing ciphertext', async () => {
     const created = createEncryptedVault(document, 'correct horse battery staple', testCost);
+    await yieldWorker();
     const changed = changeMasterPassword(created.vault, 'correct horse battery staple', 'another long master password', testCost);
+    await yieldWorker();
     expect(changed.ciphertext).toBe(created.vault.ciphertext);
     expect(unlockWithPassword(changed, 'another long master password')).toEqual(document);
+    await yieldWorker();
   });
 
-  it('rejects contextual tampering', () => {
+  it('rejects contextual tampering', async () => {
     const created = createEncryptedVault(document, 'correct horse battery staple', testCost);
+    await yieldWorker();
     expect(() => unlockWithPassword({ ...created.vault, revision: 1 }, 'correct horse battery staple')).toThrow();
+    await yieldWorker();
+    expect(() => unlockWithPassword({ ...created.vault, nonce: 'AA' }, 'correct horse battery staple')).toThrow('Unable to unlock');
+    await yieldWorker();
+    const passwordEnvelope = created.vault.envelopes.find(candidate => candidate.kind === 'master-password')!;
+    expect(() => unlockWithPassword({ ...created.vault, envelopes: [{ ...passwordEnvelope, algorithm: 'invalid' as never }] }, 'correct horse battery staple')).toThrow('Unable to unlock');
   });
 
-  it('normalizes canonically equivalent master passwords', () => {
+  it('normalizes canonically equivalent master passwords', async () => {
     const composed = 'mot-de-passe-tr\u00e8s-solide';
     const decomposed = 'mot-de-passe-tre\u0300s-solide';
     const created = createEncryptedVault(document, composed, testCost);
+    await yieldWorker();
     expect(unlockWithPassword(created.vault, decomposed)).toEqual(document);
+    await yieldWorker();
+  });
+
+  it('updates payload with a new nonce while preserving recovery envelopes', async () => {
+    const created = createEncryptedVault(document, 'correct horse battery staple', testCost);
+    await yieldWorker();
+    const updatedDocument = { ...document, revision: 1, updatedAt: '2026-01-02T00:00:00.000Z' };
+    const updated = updateEncryptedVault(created.vault, 'correct horse battery staple', updatedDocument);
+    await yieldWorker();
+    expect(updated.nonce).not.toBe(created.vault.nonce);
+    expect(updated.envelopes).toEqual(created.vault.envelopes);
+    expect(unlockWithPassword(updated, 'correct horse battery staple')).toEqual(updatedDocument);
+    await yieldWorker();
+    expect(unlockWithRecoveryKey(updated, created.recoveryKey)).toEqual(updatedDocument);
+    expect(() => updateEncryptedVault(created.vault, 'wrong password value', updatedDocument)).toThrow('Unable to update');
+    await yieldWorker();
+    expect(() => updateEncryptedVault(created.vault, 'correct horse battery staple', document)).toThrow('revision');
+  });
+
+  it('rejects KDF downgrade, oversized cost, invalid salt, and oversized passwords before derivation', async () => {
+    const created = createEncryptedVault(document, 'correct horse battery staple', testCost);
+    await yieldWorker();
+    const passwordEnvelope = created.vault.envelopes.find(candidate => candidate.kind === 'master-password')!;
+    const replaceKdf = (kdf: NonNullable<typeof passwordEnvelope.kdf>) => ({
+      ...created.vault,
+      envelopes: [{ ...passwordEnvelope, kdf }, ...created.vault.envelopes.filter(candidate => candidate.kind !== 'master-password')]
+    });
+    expect(() => unlockWithPassword(replaceKdf({ ...passwordEnvelope.kdf!, memoryKiB: 63 * 1024 }), 'correct horse battery staple')).toThrow('policy');
+    expect(() => unlockWithPassword(replaceKdf({ ...passwordEnvelope.kdf!, memoryKiB: 1024 * 1024 + 1 }), 'correct horse battery staple')).toThrow('policy');
+    expect(() => unlockWithPassword(replaceKdf({ ...passwordEnvelope.kdf!, salt: 'AA' }), 'correct horse battery staple')).toThrow('salt');
+    expect(() => createEncryptedVault(document, 'x'.repeat(1025), testCost)).toThrow('byte limit');
   });
 });
 
