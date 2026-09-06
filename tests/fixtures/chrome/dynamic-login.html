@@ -1,0 +1,7 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Dynamic login</title></head><body>
+<main><h1>Delayed form</h1><button id="add">Add form</button><div id="mount"></div></main>
+<script>
+document.querySelector('#add').addEventListener('click', () => {
+  document.querySelector('#mount').innerHTML = '<form><label>User <input name="user"></label><label>Password <input name="pass" type="password"></label><button>Continue</button></form>';
+});
+</script></body></html>

@@ -1,0 +1,22 @@
+node_modules/
+dist/
+coverage/
+.env
+.env.*
+!.env.example
+*.log
+*.pem
+*.key
+*.p12
+*.mobileprovision
+.DS_Store
+.idea/
+.vscode/
+DerivedData/
+*.xcuserstate
+apps/api/data/
+artifacts/
+
+
+# working patches (local only)
+.patches/

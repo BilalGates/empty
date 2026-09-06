@@ -1,0 +1,27 @@
+:root { color-scheme: light dark; font: 16px/1.45 Inter, system-ui, sans-serif; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; color: CanvasText; background: Canvas; }
+main { padding: 18px; }
+header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+header h1 { margin: 0; font-size: 18px; letter-spacing: -.02em; }
+#origin { max-width: 190px; overflow-wrap: anywhere; text-align: right; color: GrayText; font-size: 12px; }
+#status { color: GrayText; padding: 14px 0; }
+.spinner { display: inline-block; width: 10px; height: 10px; margin-right: 8px; border: 1px solid GrayText; border-top-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; }
+.notice { padding: 14px 0; }
+.notice h2 { margin: 0 0 6px; font-size: 16px; }
+.notice p { margin: 0; color: GrayText; }
+.credential { display: block; width: 100%; padding: 11px 0; border: 0; border-top: 1px solid color-mix(in srgb, CanvasText 14%, transparent); border-radius: 0; text-align: left; background: transparent; color: CanvasText; }
+.credential:first-child { border-top: 0; }
+.credential span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.credential small { color: GrayText; }
+button { min-height: 40px; border: 1px solid CanvasText; border-radius: 8px; padding: 8px 12px; color: Canvas; background: CanvasText; font: inherit; cursor: pointer; }
+button:focus-visible, summary:focus-visible { outline: 3px solid Highlight; outline-offset: 2px; }
+button:disabled { opacity: .55; cursor: default; }
+.secondary { color: CanvasText; background: transparent; }
+details { margin-top: 18px; border-top: 1px solid color-mix(in srgb, CanvasText 14%, transparent); padding-top: 13px; }
+summary { display: flex; min-height: 40px; align-items: center; cursor: pointer; color: GrayText; }
+.generator-row { display: flex; align-items: center; gap: 8px; margin: 12px 0 8px; }
+output { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: ui-monospace, monospace; }
+#fill-generated { width: 100%; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }

@@ -1,0 +1,38 @@
+name: Release candidate
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run check
+      - run: npm run security:secrets
+      - run: npm run security:permissions
+      - run: node scripts/check-release-version.mjs "${GITHUB_REF_NAME:-}"
+      - run: node scripts/check-migrations.mjs
+      - run: bash scripts/package-extension.sh
+      - run: test -f artifacts/space-chrome.zip.sha256
+  ios:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/ios-build-gate.sh
+  release-status:
+    if: always()
+    needs: [verify, ios]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require every gate
+        env: { VERIFY: "${{ needs.verify.result }}", IOS: "${{ needs.ios.result }}" }
+        run: test "$VERIFY" = success && test "$IOS" = success

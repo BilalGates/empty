@@ -1,0 +1,8 @@
+<!doctype html><html><head><meta charset="utf-8"><title>SPA login</title></head><body>
+<main id="app"><button id="navigate">Show login route</button></main>
+<script>
+document.querySelector('#navigate').addEventListener('click', () => {
+  history.pushState({}, '', '#/login');
+  document.querySelector('#app').innerHTML = '<h1>SPA sign in</h1><form><input aria-label="Account email" autocomplete="username"><input aria-label="Password" type="password" autocomplete="current-password"><button>Sign in</button></form>';
+});
+</script></body></html>
