@@ -1,5 +1,6 @@
 :root { color-scheme: light dark; font: 16px/1.45 Inter, system-ui, sans-serif; }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body { margin: 0; min-width: 320px; color: CanvasText; background: Canvas; }
 main { padding: 18px; }
 header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
@@ -10,10 +11,16 @@ header h1 { margin: 0; font-size: 18px; letter-spacing: -.02em; }
 .notice { padding: 14px 0; }
 .notice h2 { margin: 0 0 6px; font-size: 16px; }
 .notice p { margin: 0; color: GrayText; }
-.credential { display: block; width: 100%; padding: 11px 0; border: 0; border-top: 1px solid color-mix(in srgb, CanvasText 14%, transparent); border-radius: 0; text-align: left; background: transparent; color: CanvasText; }
-.credential:first-child { border-top: 0; }
-.credential span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.credential small { color: GrayText; }
+.credential-list { margin-top: 12px; }
+.credential-row { padding: 12px 0; border-top: 1px solid color-mix(in srgb, CanvasText 14%, transparent); }
+.credential-row:first-child { border-top: 0; }
+.credential-identity strong, .credential-identity small { display: block; overflow-wrap: anywhere; }
+.credential-identity small, .muted { color: GrayText; }
+.credential-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+.credential-actions button { min-height: 36px; padding: 6px 9px; font-size: 12px; }
+.text-button.inline { width: auto; margin: 0; }
+.revealed-password { display: block; margin-top: 8px; overflow-wrap: anywhere; user-select: all; }
+.feedback { min-height: 1.45em; margin: 8px 0 0; color: GrayText; font-size: 13px; }
 button { min-height: 40px; border: 1px solid CanvasText; border-radius: 8px; padding: 8px 12px; color: Canvas; background: CanvasText; font: inherit; cursor: pointer; }
 button:focus-visible, summary:focus-visible { outline: 3px solid Highlight; outline-offset: 2px; }
 button:disabled { opacity: .55; cursor: default; }

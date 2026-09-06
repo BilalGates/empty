@@ -19,6 +19,8 @@ export function isMessage(value) {
       return Number.isSafeInteger(value.tabId) && value.tabId >= 0 && origin(value.origin);
     case "SPACE_FILL":
       return Number.isSafeInteger(value.tabId) && value.tabId >= 0 && ids(value.credentialId) && origin(value.origin);
+    case "SPACE_GET_SECRET":
+      return Number.isSafeInteger(value.tabId) && value.tabId >= 0 && ids(value.credentialId) && origin(value.origin);
     case "SPACE_FILL_GENERATED":
       return Number.isSafeInteger(value.tabId) && value.tabId >= 0 && origin(value.origin) &&
         typeof value.password === "string" && value.password.length >= 12 && value.password.length <= 256;

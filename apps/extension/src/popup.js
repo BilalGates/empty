@@ -10,6 +10,17 @@ const regenerate = document.querySelector("#regenerate");
 const fillGenerated = document.querySelector("#fill-generated");
 let context = null;
 let generatedPassword = "";
+let revealTimer = null;
+let revealed = null;
+
+function concealRevealed() {
+  if (!revealed) return;
+  revealed.value.hidden = true;
+  revealed.value.textContent = "";
+  revealed.button.textContent = "Show password";
+  revealed = null;
+  clearTimeout(revealTimer);
+}
 
 function inputField(labelText, type, name, options = {}) {
   const label = document.createElement("label");
@@ -114,6 +125,67 @@ function notice(title, body, { focus = false, urgent = false } = {}) {
   }
 }
 
+async function copyCredentialValue(credentialId, field, feedback) {
+  const response = await chrome.runtime.sendMessage({ type: "SPACE_GET_SECRET", ...context, credentialId });
+  if (!response?.ok) { feedback.textContent = "Space locked. Unlock it again."; return; }
+  await navigator.clipboard.writeText(response[field]);
+  feedback.textContent = field === "password" ? "Password copied." : "Username copied.";
+  setTimeout(() => { feedback.textContent = ""; }, 1800);
+}
+
+function renderCredentialList(response) {
+  content.replaceChildren();
+  const search = inputField("Search Space", "search", "search", { required: false, autocomplete: "off" });
+  search.input.placeholder = "Name, username, or site";
+  const list = document.createElement("div");
+  list.className = "credential-list";
+  const feedback = document.createElement("p");
+  feedback.className = "feedback";
+  feedback.setAttribute("role", "status");
+  feedback.setAttribute("aria-live", "polite");
+  const exactIds = new Set(response.credentials.map((credential) => credential.id));
+
+  const draw = () => {
+    const query = search.input.value.normalize("NFC").trim().toLocaleLowerCase();
+    const matches = response.allCredentials.filter((credential) => !query || [credential.label, credential.username, ...credential.origins]
+      .some((value) => value.toLocaleLowerCase().includes(query)));
+    list.replaceChildren();
+    for (const credential of matches) {
+      const row = document.createElement("section"); row.className = "credential-row";
+      const identity = document.createElement("div"); identity.className = "credential-identity";
+      const title = document.createElement("strong"); title.textContent = credential.label || "Login";
+      const username = document.createElement("small"); username.textContent = credential.username || credential.origins[0];
+      identity.append(title, username);
+      const actions = document.createElement("div"); actions.className = "credential-actions";
+      if (exactIds.has(credential.id)) {
+        const fillButton = document.createElement("button"); fillButton.type = "button"; fillButton.textContent = "Fill";
+        fillButton.addEventListener("click", () => fill(credential.id)); actions.append(fillButton);
+      }
+      const copyUser = document.createElement("button"); copyUser.type = "button"; copyUser.className = "secondary"; copyUser.textContent = "Copy username";
+      copyUser.disabled = !credential.username; copyUser.addEventListener("click", () => copyCredentialValue(credential.id, "username", feedback));
+      const copyPassword = document.createElement("button"); copyPassword.type = "button"; copyPassword.className = "secondary"; copyPassword.textContent = "Copy password";
+      copyPassword.addEventListener("click", () => copyCredentialValue(credential.id, "password", feedback));
+      const reveal = document.createElement("button"); reveal.type = "button"; reveal.className = "text-button inline"; reveal.textContent = "Show password";
+      const value = document.createElement("code"); value.className = "revealed-password"; value.hidden = true;
+      reveal.addEventListener("click", async () => {
+        if (!value.hidden) { concealRevealed(); return; }
+        const secret = await chrome.runtime.sendMessage({ type: "SPACE_GET_SECRET", ...context, credentialId: credential.id });
+        if (!secret?.ok) { feedback.textContent = "Space locked. Unlock it again."; return; }
+        concealRevealed();
+        value.textContent = secret.password; value.hidden = false; reveal.textContent = "Hide password";
+        revealed = { value, button: reveal };
+        revealTimer = setTimeout(concealRevealed, 15_000);
+      });
+      actions.append(copyUser, copyPassword, reveal);
+      row.append(identity, actions, value); list.append(row);
+    }
+    if (!matches.length) { const empty = document.createElement("p"); empty.className = "muted"; empty.textContent = "No credentials found."; list.append(empty); }
+  };
+  search.input.addEventListener("input", draw);
+  content.append(search.label, list, feedback);
+  draw();
+}
+
 function showResponse(response) {
   status.hidden = true;
   content.hidden = false;
@@ -129,22 +201,10 @@ function showResponse(response) {
     vaultAccess(response.hasVault);
     return;
   } else if (response.state === "empty") {
-    notice("No login for this site", "Create one in Space, then return here to fill it.");
+    if (response.allCredentials?.length) renderCredentialList(response);
+    else notice("No login for this site", "Create one in Space, then return here to fill it.");
   } else {
-    content.replaceChildren();
-    for (const credential of response.credentials) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "credential";
-      button.dataset.credentialId = credential.id;
-      const label = document.createElement("span");
-      label.textContent = credential.label || "Login";
-      const username = document.createElement("small");
-      username.textContent = credential.username;
-      button.append(label, username);
-      button.addEventListener("click", () => fill(credential.id));
-      content.append(button);
-    }
+    renderCredentialList(response);
   }
   generator.hidden = false;
   appendVaultActions();

@@ -20,6 +20,14 @@ function publicCredentials(origin) {
     .map(({ id, label, username }) => ({ id, label, username }));
 }
 
+function publicIndex() {
+  if (!session || performance.now() >= session.expiresAt) {
+    session = null;
+    return null;
+  }
+  return session.credentials.map(({ id, label, username, origins }) => ({ id, label, username, origins }));
+}
+
 const credentialIndex = (document) => document.items
   .filter((item) => item.kind === "password" && !item.deletedAt)
   .map((item) => ({ id: item.id, label: item.title, username: item.username, password: item.password, origins: item.origins }));
@@ -84,7 +92,14 @@ async function handle(message) {
     const form = await ensureContent(message.tabId).catch(() => ({ kind: "none", usernameCount: 0, passwordCount: 0 }));
     const credentials = publicCredentials(message.origin);
     if (credentials === null) return { ok: true, state: "locked", hasVault: Boolean(await readStoredVault()), form };
-    return { ok: true, state: credentials.length ? "populated" : "empty", credentials, form };
+    return { ok: true, state: credentials.length ? "populated" : "empty", credentials, allCredentials: publicIndex(), form };
+  }
+  if (message.type === "SPACE_GET_SECRET") {
+    const index = publicIndex();
+    const selected = index && session.credentials.find((item) => item.id === message.credentialId);
+    if (!selected) return { ok: false, error: "credential-unavailable" };
+    session.expiresAt = performance.now() + SESSION_TTL_MS;
+    return { ok: true, username: selected.username, password: selected.password };
   }
   if (message.type === "SPACE_SCAN") return { ok: true, ...(await ensureContent(message.tabId)) };
   if (message.type === "SPACE_ADD_CREDENTIAL") {

@@ -85,6 +85,12 @@ try {
   }, { origin });
   assert(state.state === 'populated' && state.credentials.length === 1, 'Saved credential was not indexed');
   assert(!('password' in state.credentials[0]), 'Credential list exposed a password');
+  assert(state.allCredentials.length === 1 && !('password' in state.allCredentials[0]), 'Search index exposed a password');
+  const explicitSecret = await control.evaluate(async ({ origin: currentOrigin, credentialId }) => {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    return chrome.runtime.sendMessage({ type: 'SPACE_GET_SECRET', tabId: tab.id, origin: currentOrigin, credentialId });
+  }, { origin, credentialId: state.credentials[0].id });
+  assert(explicitSecret.ok && explicitSecret.password === 'test-value', 'Explicit trusted-context secret access failed');
   const fill = await control.evaluate(async ({ origin: currentOrigin, credentialId }) => {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     return chrome.runtime.sendMessage({ type: 'SPACE_FILL', tabId: tab.id, origin: currentOrigin, credentialId });
@@ -116,7 +122,7 @@ try {
     credential: { username: '', password: 'test-value' }
   });
   assert(guarded.error === 'confirmation-required', 'Signup fill did not require confirmation');
-  console.log('Chrome MV3 E2E passed: traditional, dynamic, SPA, signup guard, exact-origin rejection.');
+  console.log('Chrome MV3 E2E passed: encrypted vault, public search index, explicit secret access, fill, dynamic, SPA, signup guard, exact-origin rejection.');
 } finally {
   if (context) await context.close();
   await new Promise((resolveClose) => server.close(resolveClose));

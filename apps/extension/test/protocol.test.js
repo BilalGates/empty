@@ -8,6 +8,7 @@ test("accepts the bounded protocol and rejects unknown or oversized payloads", (
   assert.equal(isMessage({ type: "SPACE_UNLOCK", password: "short" }), false);
   assert.equal(isMessage({ type: "SPACE_ADD_CREDENTIAL", tabId: 4, origin: "https://example.com", title: "Example", username: "person", password: "value" }), true);
   assert.equal(isMessage({ type: "SPACE_FILL", tabId: 4, origin: "https://example.com", credentialId: "x" }), true);
+  assert.equal(isMessage({ type: "SPACE_GET_SECRET", tabId: 7, origin: "https://example.com", credentialId: "item" }), true);
   assert.equal(isMessage({ type: "SPACE_FILL", tabId: 4, origin: "https://example.com", credentialId: "" }), false);
   assert.equal(isMessage({ type: "SPACE_CONTENT_FILL", requestId: "x", origin: "https://example.com", credential: { username: "u", password: "p" } }), true);
   assert.equal(isMessage({ type: "DO_ANYTHING", payload: {} }), false);
