@@ -38,6 +38,11 @@ input { width: 100%; min-height: 40px; border: 1px solid color-mix(in srgb, Canv
 input:focus-visible { outline: 3px solid Highlight; outline-offset: 1px; }
 .form-error { min-height: 1.45em; margin: 0; color: #b42318; font-size: 13px; }
 .text-button { width: 100%; margin-top: 12px; border-color: transparent; color: GrayText; background: transparent; }
+.delete-area { margin-top: 20px; padding-top: 12px; border-top: 1px solid color-mix(in srgb, CanvasText 14%, transparent); }
+.delete-area p { margin: 0 0 10px; }
+.delete-area .secondary, .delete-area .danger-solid { width: 100%; margin-top: 8px; }
+.danger { color: #b42318; }
+.danger-solid { border-color: #b42318; background: #b42318; color: white; }
 .recovery-key { display: block; margin: 14px 0; padding: 10px; overflow-wrap: anywhere; user-select: all; font-family: ui-monospace, monospace; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }

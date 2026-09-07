@@ -125,9 +125,26 @@ function appendVaultActions() {
     result.append(summaryText, confirm);
   });
   importer.append(importSummary, warning, fileField.label, review, result);
+  const backup = document.createElement("details");
+  const backupSummary = document.createElement("summary"); backupSummary.textContent = "Create encrypted backup";
+  const backupCopy = document.createElement("p"); backupCopy.className = "muted"; backupCopy.textContent = "Re-enter your master password. The downloaded file remains encrypted.";
+  const backupPassword = inputField("Master password", "password", "backup-password", { autocomplete: "current-password" });
+  const download = document.createElement("button"); download.type = "button"; download.textContent = "Download encrypted backup";
+  const backupFeedback = document.createElement("p"); backupFeedback.className = "form-error"; backupFeedback.setAttribute("role", "alert");
+  download.addEventListener("click", async () => {
+    download.disabled = true; backupFeedback.textContent = "";
+    const response = await chrome.runtime.sendMessage({ type: "SPACE_EXPORT_BACKUP", ...context, password: backupPassword.input.value });
+    backupPassword.input.value = "";
+    if (!response?.ok) { download.disabled = false; backupFeedback.textContent = response?.error === "invalid-credentials" ? "The master password is incorrect." : "The backup could not be created."; return; }
+    const url = URL.createObjectURL(new Blob([response.content], { type: "application/json" }));
+    const anchor = document.createElement("a"); anchor.href = url; anchor.download = response.filename; anchor.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    download.disabled = false; backupFeedback.textContent = "Encrypted backup downloaded.";
+  });
+  backup.append(backupSummary, backupCopy, backupPassword.label, download, backupFeedback);
   const lock = document.createElement("button"); lock.type = "button"; lock.className = "text-button"; lock.textContent = "Lock Space";
   lock.addEventListener("click", async () => { await chrome.runtime.sendMessage({ type: "SPACE_LOCK" }); await refresh(); });
-  content.append(details, importer, lock);
+  content.append(details, importer, backup, lock);
 }
 
 function regeneratePassword() {
@@ -158,6 +175,47 @@ async function copyCredentialValue(credentialId, field, feedback) {
   await navigator.clipboard.writeText(response[field]);
   feedback.textContent = field === "password" ? "Password copied." : "Username copied.";
   setTimeout(() => { feedback.textContent = ""; }, 1800);
+}
+
+async function renderCredentialEditor(credential) {
+  concealRevealed();
+  const secret = await chrome.runtime.sendMessage({ type: "SPACE_GET_SECRET", ...context, credentialId: credential.id });
+  if (!secret?.ok) { await refresh(); return; }
+  content.replaceChildren();
+  const heading = document.createElement("h2"); heading.textContent = "Edit login";
+  const form = document.createElement("form");
+  const title = inputField("Name", "text", "edit-title", { value: credential.label });
+  const website = inputField("Website", "url", "edit-website", { value: credential.origins[0] });
+  const username = inputField("Username or email", "text", "edit-username", { value: secret.username, required: false, autocomplete: "username" });
+  const password = inputField("Password", "password", "edit-password", { value: secret.password, autocomplete: "new-password" });
+  const save = document.createElement("button"); save.type = "submit"; save.textContent = "Save changes";
+  const cancel = document.createElement("button"); cancel.type = "button"; cancel.className = "secondary"; cancel.textContent = "Cancel"; cancel.addEventListener("click", refresh);
+  const error = document.createElement("p"); error.className = "form-error"; error.setAttribute("role", "alert");
+  form.append(title.label, website.label, username.label, password.label, save, cancel, error);
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault(); save.disabled = true; error.textContent = "";
+    const response = await chrome.runtime.sendMessage({ type: "SPACE_UPDATE_CREDENTIAL", ...context, credentialId: credential.id, title: title.input.value, website: website.input.value, username: username.input.value, password: password.input.value });
+    password.input.value = "";
+    if (response?.ok) await refresh();
+    else { save.disabled = false; error.textContent = response?.error === "unsafe-origin" ? "Use HTTPS, or HTTP only for localhost." : "The login could not be updated."; }
+  });
+  const deleteArea = document.createElement("div"); deleteArea.className = "delete-area";
+  const startDelete = document.createElement("button"); startDelete.type = "button"; startDelete.className = "text-button danger"; startDelete.textContent = "Delete login";
+  startDelete.addEventListener("click", () => {
+    const prompt = document.createElement("p"); prompt.textContent = "Delete this login permanently?";
+    const confirmDelete = document.createElement("button"); confirmDelete.type = "button"; confirmDelete.className = "danger-solid"; confirmDelete.textContent = "Delete login";
+    const keep = document.createElement("button"); keep.type = "button"; keep.className = "secondary"; keep.textContent = "Keep login";
+    keep.addEventListener("click", () => { deleteArea.replaceChildren(startDelete); startDelete.focus(); });
+    confirmDelete.addEventListener("click", async () => {
+      confirmDelete.disabled = true;
+      const response = await chrome.runtime.sendMessage({ type: "SPACE_DELETE_CREDENTIAL", ...context, credentialId: credential.id });
+      if (response?.ok) await refresh(); else { confirmDelete.disabled = false; error.textContent = "The login could not be deleted."; }
+    });
+    deleteArea.replaceChildren(prompt, keep, confirmDelete); keep.focus();
+  });
+  deleteArea.append(startDelete);
+  content.append(heading, form, deleteArea);
+  title.input.focus();
 }
 
 function renderCredentialList(response) {
@@ -193,6 +251,8 @@ function renderCredentialList(response) {
       const copyPassword = document.createElement("button"); copyPassword.type = "button"; copyPassword.className = "secondary"; copyPassword.textContent = "Copy password";
       copyPassword.addEventListener("click", () => copyCredentialValue(credential.id, "password", feedback));
       const reveal = document.createElement("button"); reveal.type = "button"; reveal.className = "text-button inline"; reveal.textContent = "Show password";
+      const edit = document.createElement("button"); edit.type = "button"; edit.className = "text-button inline"; edit.textContent = "Edit";
+      edit.addEventListener("click", () => renderCredentialEditor(credential));
       const value = document.createElement("code"); value.className = "revealed-password"; value.hidden = true;
       reveal.addEventListener("click", async () => {
         if (!value.hidden) { concealRevealed(); return; }
@@ -203,7 +263,7 @@ function renderCredentialList(response) {
         revealed = { value, button: reveal };
         revealTimer = setTimeout(concealRevealed, 15_000);
       });
-      actions.append(copyUser, copyPassword, reveal);
+      actions.append(copyUser, copyPassword, reveal, edit);
       row.append(identity, actions, value); list.append(row);
     }
     if (!matches.length) { const empty = document.createElement("p"); empty.className = "muted"; empty.textContent = "No credentials found."; list.append(empty); }

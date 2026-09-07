@@ -14,6 +14,17 @@ export function isMessage(value) {
         typeof value.title === "string" && value.title.length >= 1 && value.title.length <= 256 &&
         typeof value.username === "string" && value.username.length <= 1024 &&
         typeof value.password === "string" && value.password.length >= 1 && value.password.length <= 4096;
+    case "SPACE_UPDATE_CREDENTIAL":
+      return Number.isSafeInteger(value.tabId) && value.tabId >= 0 && origin(value.origin) && ids(value.credentialId) &&
+        typeof value.title === "string" && value.title.length >= 1 && value.title.length <= 256 &&
+        typeof value.website === "string" && value.website.length >= 1 && value.website.length <= 2048 &&
+        typeof value.username === "string" && value.username.length <= 1024 &&
+        typeof value.password === "string" && value.password.length >= 1 && value.password.length <= 4096;
+    case "SPACE_DELETE_CREDENTIAL":
+      return Number.isSafeInteger(value.tabId) && value.tabId >= 0 && origin(value.origin) && ids(value.credentialId);
+    case "SPACE_EXPORT_BACKUP":
+      return Number.isSafeInteger(value.tabId) && value.tabId >= 0 && origin(value.origin) &&
+        typeof value.password === "string" && value.password.length >= 12 && value.password.length <= 1024;
     case "SPACE_GET_STATE":
     case "SPACE_SCAN":
       return Number.isSafeInteger(value.tabId) && value.tabId >= 0 && origin(value.origin);

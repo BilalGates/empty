@@ -14,6 +14,13 @@ Manifest V3 implementation for a local encrypted preview vault and explicit, ori
 
 The popup creates a vault, displays its recovery key once, unlocks, adds origin-scoped credentials, searches only non-secret metadata, copies on explicit action, reveals at most one password for 15 seconds, locks manually, and fills only a selected exact-origin credential. The current encrypted JSON container is a preview format, not the normative CBOR per-object `space.vault/1` protocol; do not use it for real credentials until the cross-platform vector gate is closed.
 
+Only the encrypted vault container is written to persistent `chrome.storage.local`. The unlocked session uses Chrome's memory-only `storage.session`, is restricted to trusted extension contexts, and an alarm removes it after five minutes of inactivity. Manual lock, browser restart, extension reload, update, or disable also clears it.
+
+Chrome CSV import is parsed locally, reviewed before commit, and never written to
+persistent storage as plaintext. Credentials can be edited or tombstoned from global
+search. Encrypted backups require master-password reauthentication and download without
+adding the broad `downloads` permission; plaintext CSV export is intentionally disabled.
+
 ## Build and test
 
 From this directory:

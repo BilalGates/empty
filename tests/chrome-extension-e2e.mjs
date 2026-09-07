@@ -81,6 +81,26 @@ try {
     return chrome.runtime.sendMessage({ type: 'SPACE_GET_STATE', tabId: tab.id, origin: currentOrigin });
   }, { origin: new URL(page.url()).origin });
   assert(restoredState.ok && restoredState.state === 'empty', 'Memory-only unlocked session did not survive normal MV3 worker termination');
+  const contentCanReadSession = await control.evaluate(async () => {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const [result] = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: () => new Promise((resolve) => {
+        const timeout = setTimeout(() => resolve(false), 1_000);
+        try {
+          chrome.storage.session.get('unlockedSession', (stored) => {
+            clearTimeout(timeout);
+            resolve(Boolean(stored?.unlockedSession));
+          });
+        } catch {
+          clearTimeout(timeout);
+          resolve(false);
+        }
+      })
+    });
+    return result.result;
+  });
+  assert(contentCanReadSession === false, 'Content-script context could read the unlocked session');
   const traditional = await command(control, page, { type: 'SPACE_CONTENT_SCAN' });
   assert(traditional.kind === 'login', 'Traditional login was not detected');
   const origin = new URL(page.url()).origin;
@@ -88,8 +108,8 @@ try {
   const preview = await control.evaluate(async ({ origin: currentOrigin, csv }) => {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     return chrome.runtime.sendMessage({ type: 'SPACE_PREVIEW_IMPORT', tabId: tab.id, origin: currentOrigin, csv });
-  }, { origin, csv: `name,url,username,password\nOther,https://other.example,other@example.com,${importedPassword}` });
-  assert(preview.ok && preview.accepted === 1 && preview.duplicates === 0, 'CSV import preview failed');
+  }, { origin, csv: `name,url,username,password\nOther,https://other.example,other@example.com,${importedPassword}\nUnsafe,http://other.example,user,unsafe-value` });
+  assert(preview.ok && preview.accepted === 1 && preview.duplicates === 0 && preview.issueCount === 1, `CSV import preview failed: ${JSON.stringify(preview)}`);
   const committedImport = await control.evaluate(async ({ origin: currentOrigin, token }) => {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     return chrome.runtime.sendMessage({ type: 'SPACE_COMMIT_IMPORT', tabId: tab.id, origin: currentOrigin, token });
@@ -114,6 +134,30 @@ try {
     return chrome.runtime.sendMessage({ type: 'SPACE_GET_SECRET', tabId: tab.id, origin: currentOrigin, credentialId });
   }, { origin, credentialId: state.credentials[0].id });
   assert(explicitSecret.ok && explicitSecret.password === 'test-value', 'Explicit trusted-context secret access failed');
+  const activeWorker = context.serviceWorkers()[0] ?? await context.waitForEvent('serviceworker');
+  const delayInstalled = await activeWorker.evaluate(() => {
+    const original = chrome.tabs.sendMessage.bind(chrome.tabs);
+    globalThis.__spaceOriginalSendMessage = original;
+    const delayed = async (tabId, message, ...rest) => {
+      if (message?.type === 'SPACE_CONTENT_SCAN') await new Promise((resolveDelay) => setTimeout(resolveDelay, 400));
+      return original(tabId, message, ...rest);
+    };
+    chrome.tabs.sendMessage = delayed;
+    return chrome.tabs.sendMessage === delayed;
+  });
+  assert(delayInstalled, 'Could not install the deterministic fill-race delay');
+  const racingFill = control.evaluate(async ({ origin: currentOrigin, credentialId }) => {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    return chrome.runtime.sendMessage({ type: 'SPACE_FILL', tabId: tab.id, origin: currentOrigin, credentialId });
+  }, { origin, credentialId: state.credentials[0].id });
+  await new Promise((resolveDelay) => setTimeout(resolveDelay, 100));
+  const lockedDuringFill = await control.evaluate(() => chrome.runtime.sendMessage({ type: 'SPACE_LOCK' }));
+  const racedFillResult = await racingFill;
+  assert(lockedDuringFill.ok && !racedFillResult.ok && racedFillResult.error === 'locked', 'Lock did not cancel a fill already in flight');
+  assert(await page.locator('input[type=email]').inputValue() === '' && await page.locator('input[type=password]').inputValue() === '', 'A secret was filled after lock');
+  await activeWorker.evaluate(() => { chrome.tabs.sendMessage = globalThis.__spaceOriginalSendMessage; });
+  const unlockedAfterRace = await control.evaluate((password) => chrome.runtime.sendMessage({ type: 'SPACE_UNLOCK', password }), master);
+  assert(unlockedAfterRace.ok, 'Vault did not unlock after the fill-race check');
   const fill = await control.evaluate(async ({ origin: currentOrigin, credentialId }) => {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     return chrome.runtime.sendMessage({ type: 'SPACE_FILL', tabId: tab.id, origin: currentOrigin, credentialId });
@@ -126,6 +170,40 @@ try {
     credential: { username: 'attacker', password: 'attacker' }
   });
   assert(rejected.error === 'origin-mismatch', 'Origin confusion did not fail closed');
+  const rejectedBackup = await control.evaluate(async ({ origin: currentOrigin, password }) => {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    return chrome.runtime.sendMessage({ type: 'SPACE_EXPORT_BACKUP', tabId: tab.id, origin: currentOrigin, password });
+  }, { origin, password: wrongMaster });
+  assert(!rejectedBackup.ok && rejectedBackup.error === 'invalid-credentials', 'Backup export skipped reauthentication');
+  const backup = await control.evaluate(async ({ origin: currentOrigin, password }) => {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    return chrome.runtime.sendMessage({ type: 'SPACE_EXPORT_BACKUP', tabId: tab.id, origin: currentOrigin, password });
+  }, { origin, password: master });
+  assert(backup.ok && backup.filename === 'space-backup.json', 'Encrypted backup export failed');
+  assert(JSON.parse(backup.content).ciphertext && !backup.content.includes('test-value'), 'Backup was not ciphertext-only');
+  const updatedPassword = ['updated', 'test', 'value'].join('-');
+  const updated = await control.evaluate(async ({ origin: currentOrigin, credentialId, password }) => {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    return chrome.runtime.sendMessage({ type: 'SPACE_UPDATE_CREDENTIAL', tabId: tab.id, origin: currentOrigin, credentialId, title: 'Updated fixture', website: currentOrigin, username: 'updated@example.com', password });
+  }, { origin, credentialId: state.credentials[0].id, password: updatedPassword });
+  assert(updated.ok, 'Credential update failed');
+  const updatedSecret = await control.evaluate(async ({ origin: currentOrigin, credentialId }) => {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    return chrome.runtime.sendMessage({ type: 'SPACE_GET_SECRET', tabId: tab.id, origin: currentOrigin, credentialId });
+  }, { origin, credentialId: state.credentials[0].id });
+  assert(updatedSecret.ok && updatedSecret.username === 'updated@example.com' && updatedSecret.password === updatedPassword, 'Updated secret was not available');
+  const afterUpdateStorage = await control.evaluate(() => chrome.storage.local.get('encryptedVault'));
+  assert(!JSON.stringify(afterUpdateStorage).includes(updatedPassword), 'Updated plaintext leaked to persistent storage');
+  const deleted = await control.evaluate(async ({ origin: currentOrigin, credentialId }) => {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    return chrome.runtime.sendMessage({ type: 'SPACE_DELETE_CREDENTIAL', tabId: tab.id, origin: currentOrigin, credentialId });
+  }, { origin, credentialId: state.credentials[0].id });
+  assert(deleted.ok, 'Credential deletion failed');
+  const afterDelete = await control.evaluate(async ({ origin: currentOrigin }) => {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    return chrome.runtime.sendMessage({ type: 'SPACE_GET_STATE', tabId: tab.id, origin: currentOrigin });
+  }, { origin });
+  assert(afterDelete.state === 'empty' && afterDelete.credentials.length === 0 && afterDelete.allCredentials.length === 1, 'Deleted credential remained indexed');
 
   await page.goto(`${baseUrl}/dynamic-login.html`);
   await page.locator('#add').click();
@@ -145,7 +223,7 @@ try {
     credential: { username: '', password: 'test-value' }
   });
   assert(guarded.error === 'confirmation-required', 'Signup fill did not require confirmation');
-  console.log('Chrome MV3 E2E passed: encrypted vault, in-memory session restore, local CSV import, plaintext-persistence guard, fill, dynamic, SPA, signup guard, exact-origin rejection.');
+  console.log('Chrome MV3 E2E passed: encrypted vault, session restore, local import, backup reauth, edit/delete, plaintext guards, fill, dynamic, SPA, signup guard, exact-origin rejection.');
 } finally {
   if (context) await context.close();
   await new Promise((resolveClose) => server.close(resolveClose));

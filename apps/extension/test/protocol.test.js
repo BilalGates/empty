@@ -7,6 +7,9 @@ test("accepts the bounded protocol and rejects unknown or oversized payloads", (
   assert.equal(isMessage({ type: "SPACE_UNLOCK", password: "secure phrase" }), true);
   assert.equal(isMessage({ type: "SPACE_UNLOCK", password: "short" }), false);
   assert.equal(isMessage({ type: "SPACE_ADD_CREDENTIAL", tabId: 4, origin: "https://example.com", title: "Example", username: "person", password: "value" }), true);
+  assert.equal(isMessage({ type: "SPACE_UPDATE_CREDENTIAL", tabId: 4, origin: "https://example.com", credentialId: "id", title: "Example", website: "https://example.com", username: "person", password: "value" }), true);
+  assert.equal(isMessage({ type: "SPACE_DELETE_CREDENTIAL", tabId: 4, origin: "https://example.com", credentialId: "id" }), true);
+  assert.equal(isMessage({ type: "SPACE_EXPORT_BACKUP", tabId: 4, origin: "https://example.com", password: "secure phrase" }), true);
   assert.equal(isMessage({ type: "SPACE_FILL", tabId: 4, origin: "https://example.com", credentialId: "x" }), true);
   assert.equal(isMessage({ type: "SPACE_GET_SECRET", tabId: 7, origin: "https://example.com", credentialId: "item" }), true);
   assert.equal(isMessage({ type: "SPACE_PREVIEW_IMPORT", tabId: 4, origin: "https://example.com", csv: "url,username,password" }), true);
