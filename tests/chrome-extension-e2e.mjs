@@ -122,9 +122,11 @@ try {
   assert(!JSON.stringify(afterImportStorage).includes(importedPassword), 'Imported plaintext leaked to extension storage');
   const added = await control.evaluate(async ({ origin: currentOrigin }) => {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    return chrome.runtime.sendMessage({ type: 'SPACE_ADD_CREDENTIAL', tabId: tab.id, origin: currentOrigin, title: 'Fixture', username: 'person@example.com', password: 'test-value' });
+    const startedAt = performance.now();
+    const response = await chrome.runtime.sendMessage({ type: 'SPACE_ADD_CREDENTIAL', tabId: tab.id, origin: currentOrigin, title: 'Fixture', username: 'person@example.com', password: 'test-value' });
+    return { ...response, elapsedMs: performance.now() - startedAt };
   }, { origin });
-  assert(added.ok, 'Credential was not encrypted and saved');
+  assert(added.ok && added.elapsedMs < 5_000, `Credential save was not fast after unlock: ${added.elapsedMs}ms`);
   const state = await control.evaluate(async ({ origin: currentOrigin }) => {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     return chrome.runtime.sendMessage({ type: 'SPACE_GET_STATE', tabId: tab.id, origin: currentOrigin });
@@ -187,9 +189,11 @@ try {
   const updatedPassword = ['updated', 'test', 'value'].join('-');
   const updated = await control.evaluate(async ({ origin: currentOrigin, credentialId, password }) => {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    return chrome.runtime.sendMessage({ type: 'SPACE_UPDATE_CREDENTIAL', tabId: tab.id, origin: currentOrigin, credentialId, title: 'Updated fixture', website: currentOrigin, username: 'updated@example.com', password });
+    const startedAt = performance.now();
+    const response = await chrome.runtime.sendMessage({ type: 'SPACE_UPDATE_CREDENTIAL', tabId: tab.id, origin: currentOrigin, credentialId, title: 'Updated fixture', website: currentOrigin, username: 'updated@example.com', password });
+    return { ...response, elapsedMs: performance.now() - startedAt };
   }, { origin, credentialId: state.credentials[0].id, password: updatedPassword });
-  assert(updated.ok, 'Credential update failed');
+  assert(updated.ok && updated.elapsedMs < 5_000, `Credential update was not fast after unlock: ${updated.elapsedMs}ms`);
   const updatedSecret = await control.evaluate(async ({ origin: currentOrigin, credentialId }) => {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     return chrome.runtime.sendMessage({ type: 'SPACE_GET_SECRET', tabId: tab.id, origin: currentOrigin, credentialId });
