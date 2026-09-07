@@ -21,3 +21,5 @@ Scope: API authentication, device lifecycle, opaque vault persistence, increment
 ## Integration review items
 
 Before release, run typecheck/tests against PostgreSQL and confirm: disabled users cannot authenticate; duplicate item IDs in one push are rejected as a validation error; all `/v1` responses send `Cache-Control: no-store`; error serialization redacts parser `err.body`; and device revocation plus its audit event are committed atomically. These items require adversarial verification in addition to the normal security review.
+
+The network API must not issue a new device token from an ordinary bearer session. Administrative provisioning plus authenticated vault-identity binding is the temporary safe boundary. Remote enrollment remains blocked on a step-up, replay-safe, signed/SAS ceremony covered by the crypto change gate.

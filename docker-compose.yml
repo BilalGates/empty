@@ -25,7 +25,9 @@ services:
       HOST: 0.0.0.0
       PORT: 3000
       DATABASE_URL: postgres://space:${POSTGRES_PASSWORD}@postgres:5432/space
-      DATABASE_SSL_MODE: ${DATABASE_SSL_MODE:-require}
+      # The bundled PostgreSQL is reachable only on the internal Docker network and
+      # does not terminate TLS. External/managed databases must explicitly use require.
+      DATABASE_SSL_MODE: ${DATABASE_SSL_MODE:-disable}
       DEVICE_TOKEN_PEPPER: ${DEVICE_TOKEN_PEPPER:?set DEVICE_TOKEN_PEPPER}
       LOG_LEVEL: ${LOG_LEVEL:-info}
     depends_on:
