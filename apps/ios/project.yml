@@ -44,6 +44,9 @@ targets:
         SpaceKeychainAccessGroup: "$(AppIdentifierPrefix)com.space.shared"
     entitlements:
       path: Configuration/Space.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.space.app
     dependencies:
       - target: SpaceShared
       - target: SpaceCredentialProvider
@@ -65,7 +68,7 @@ targets:
       path: Configuration/CredentialProvider.entitlements
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.space.credential-provider
+        PRODUCT_BUNDLE_IDENTIFIER: com.space.app.credential-provider
         APPLICATION_EXTENSION_API_ONLY: YES
         SKIP_INSTALL: YES
     dependencies:

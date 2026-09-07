@@ -12,7 +12,7 @@
   },
   "scripts": {
     "build": "npm run build --workspaces --if-present",
-    "test": "vitest run --maxWorkers=1 --exclude apps/extension/test/** && npm test --workspace @space/extension",
+    "test": "vitest run --maxWorkers=1 --exclude \"apps/extension/test/**\" && npm test --workspace @space/extension",
     "test:coverage": "vitest run --coverage",
     "test:chrome:e2e": "npm run build --workspace @space/extension && node tests/chrome-extension-e2e.mjs",
     "lint": "eslint .",

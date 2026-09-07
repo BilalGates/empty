@@ -7,8 +7,8 @@ Status: scaffolding; signing and device verification are release blockers.
 The development identifiers in `apps/ios/project.yml` must be registered to the selected team. An Apple Developer Account
 Holder or Admin must create and consistently configure:
 
-1. An explicit App ID for the host app (`com.space`).
-2. An explicit App ID for the credential provider (`com.space.credential-provider`).
+1. An explicit App ID for the host app (`com.space.app`).
+2. An explicit App ID for the credential provider (`com.space.app.credential-provider`).
 3. App Group `group.com.space.shared`, assigned only to those two App IDs.
 4. Keychain Sharing group `$(AppIdentifierPrefix)com.space.shared`, assigned only to
    those two App IDs. The team prefix is not interchangeable with the Team ID for older
