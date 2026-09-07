@@ -1,4 +1,4 @@
-@preconcurrency import AuthenticationServices
+import AuthenticationServices
 import Foundation
 import Observation
 import SpaceShared
@@ -238,6 +238,22 @@ final class VaultViewModel {
             )
         }
         // AutoFill identity metadata never contains the credential password.
-        try await ASCredentialIdentityStore.shared.replaceCredentialIdentities(identities)
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            ASCredentialIdentityStore.shared.replaceCredentialIdentities(identities) { success, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else if success {
+                    continuation.resume()
+                } else {
+                    continuation.resume(
+                        throwing: NSError(
+                            domain: "SpaceCredentialIdentityStore",
+                            code: 1,
+                            userInfo: [NSLocalizedDescriptionKey: "Credential identities were not accepted."]
+                        )
+                    )
+                }
+            }
+        }
     }
 }
