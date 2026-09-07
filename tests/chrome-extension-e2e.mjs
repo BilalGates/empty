@@ -63,6 +63,7 @@ try {
   assert(!JSON.stringify(stored).includes(master), 'Master password leaked to extension storage');
   await control.evaluate(() => chrome.runtime.sendMessage({ type: 'SPACE_LOCK' }));
   const wrongMaster = ['wrong', 'master', 'value'].join('-');
+  const wrongRecovery = ['invalid', 'recovery', 'value'].join('-');
   const rejectedUnlock = await control.evaluate((password) => chrome.runtime.sendMessage({ type: 'SPACE_UNLOCK', password }), wrongMaster);
   assert(!rejectedUnlock.ok, 'Wrong master password unlocked the vault');
   const unlocked = await control.evaluate((password) => chrome.runtime.sendMessage({ type: 'SPACE_UNLOCK', password }), master);
@@ -211,20 +212,20 @@ try {
     return chrome.runtime.sendMessage({ type: 'SPACE_GET_STATE', tabId: tab.id, origin: currentOrigin });
   }, { origin });
   assert(afterDelete.state === 'empty' && afterDelete.credentials.length === 0 && afterDelete.allCredentials.length === 1, 'Deleted credential remained indexed');
-  const rejectedRestore = await control.evaluate(async ({ origin: currentOrigin, content, password }) => {
+  const rejectedRestore = await control.evaluate(async ({ origin: currentOrigin, content, recoveryKey }) => {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    return chrome.runtime.sendMessage({ type: 'SPACE_RESTORE_BACKUP', tabId: tab.id, origin: currentOrigin, content, password, replaceConfirmed: true });
-  }, { origin, content: backup.content, password: wrongMaster });
-  assert(!rejectedRestore.ok && rejectedRestore.error === 'invalid-backup', 'Backup restore accepted an incorrect password');
+    return chrome.runtime.sendMessage({ type: 'SPACE_RESTORE_BACKUP', tabId: tab.id, origin: currentOrigin, content, method: 'recovery-key', secret: recoveryKey, replaceConfirmed: true });
+  }, { origin, content: backup.content, recoveryKey: wrongRecovery });
+  assert(!rejectedRestore.ok && rejectedRestore.error === 'invalid-backup', 'Backup restore accepted an incorrect recovery key');
   const stateAfterRejectedRestore = await control.evaluate(async ({ origin: currentOrigin }) => {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     return chrome.runtime.sendMessage({ type: 'SPACE_GET_STATE', tabId: tab.id, origin: currentOrigin });
   }, { origin });
   assert(stateAfterRejectedRestore.state === 'empty', 'Rejected restore changed the current vault');
-  const restoredBackup = await control.evaluate(async ({ origin: currentOrigin, content, password }) => {
+  const restoredBackup = await control.evaluate(async ({ origin: currentOrigin, content, recoveryKey }) => {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    return chrome.runtime.sendMessage({ type: 'SPACE_RESTORE_BACKUP', tabId: tab.id, origin: currentOrigin, content, password, replaceConfirmed: true });
-  }, { origin, content: backup.content, password: master });
+    return chrome.runtime.sendMessage({ type: 'SPACE_RESTORE_BACKUP', tabId: tab.id, origin: currentOrigin, content, method: 'recovery-key', secret: recoveryKey, replaceConfirmed: true });
+  }, { origin, content: backup.content, recoveryKey: createdVault.recoveryKey });
   assert(restoredBackup.ok && restoredBackup.restored === 2, 'Encrypted backup restore failed');
   const stateAfterRestore = await control.evaluate(async ({ origin: currentOrigin }) => {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });

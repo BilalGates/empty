@@ -87,7 +87,16 @@ function appendRestoreBackup(hasVault) {
   const restoreSummary = document.createElement("summary"); restoreSummary.textContent = "Restore encrypted backup";
   const restoreCopy = document.createElement("p"); restoreCopy.className = "muted"; restoreCopy.textContent = "Space validates and decrypts the backup locally before replacing anything.";
   const restoreFile = inputField("Space backup", "file", "restore-file"); restoreFile.input.accept = ".json,application/json";
-  const restorePassword = inputField("Backup master password", "password", "restore-password", { autocomplete: "current-password" });
+  const methodLabel = document.createElement("label"); methodLabel.textContent = "Recovery method";
+  const method = document.createElement("select"); method.name = "restore-method";
+  const passwordOption = document.createElement("option"); passwordOption.value = "password"; passwordOption.textContent = "Master password";
+  const recoveryOption = document.createElement("option"); recoveryOption.value = "recovery-key"; recoveryOption.textContent = "Recovery key";
+  method.append(passwordOption, recoveryOption); methodLabel.append(method);
+  const restoreSecret = inputField("Master password", "password", "restore-secret", { autocomplete: "current-password" });
+  method.addEventListener("change", () => {
+    restoreSecret.label.firstChild.textContent = method.value === "password" ? "Master password" : "Recovery key";
+    restoreSecret.input.autocomplete = method.value === "password" ? "current-password" : "off";
+  });
   const replacement = document.createElement("label");
   const replacementCheck = document.createElement("input"); replacementCheck.type = "checkbox"; replacementCheck.required = hasVault;
   replacement.append(replacementCheck, document.createTextNode(hasVault ? " Replace the current vault" : " Restore this vault"));
@@ -99,13 +108,13 @@ function appendRestoreBackup(hasVault) {
     if (file.size > 20_000_000) { restoreFeedback.textContent = "The backup exceeds the 20 MB restore limit."; return; }
     if (hasVault && !replacementCheck.checked) { restoreFeedback.textContent = "Confirm replacement of the current vault."; return; }
     restoreButton.disabled = true; restoreButton.textContent = "Validating…";
-    const response = await chrome.runtime.sendMessage({ type: "SPACE_RESTORE_BACKUP", ...context, password: restorePassword.input.value, content: await file.text(), replaceConfirmed: !hasVault || replacementCheck.checked });
-    restorePassword.input.value = ""; restoreFile.input.value = "";
+    const response = await chrome.runtime.sendMessage({ type: "SPACE_RESTORE_BACKUP", ...context, method: method.value, secret: restoreSecret.input.value, content: await file.text(), replaceConfirmed: !hasVault || replacementCheck.checked });
+    restoreSecret.input.value = ""; restoreFile.input.value = "";
     if (response?.ok) { restoreFeedback.textContent = `${response.restored} credentials restored.`; setTimeout(refresh, 800); return; }
     restoreButton.disabled = false; restoreButton.textContent = "Validate and restore";
     restoreFeedback.textContent = response?.error === "confirmation-required" ? "Confirm replacement of the current vault." : "The backup or its master password is invalid.";
   });
-  restore.append(restoreSummary, restoreCopy, restoreFile.label, restorePassword.label, replacement, restoreButton, restoreFeedback);
+  restore.append(restoreSummary, restoreCopy, restoreFile.label, methodLabel, restoreSecret.label, replacement, restoreButton, restoreFeedback);
   content.append(restore);
 }
 

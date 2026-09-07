@@ -27,7 +27,8 @@ export function isMessage(value) {
         typeof value.password === "string" && value.password.length >= 12 && value.password.length <= 1024;
     case "SPACE_RESTORE_BACKUP":
       return Number.isSafeInteger(value.tabId) && value.tabId >= 0 && origin(value.origin) &&
-        typeof value.password === "string" && value.password.length >= 12 && value.password.length <= 1024 &&
+        ["password", "recovery-key"].includes(value.method) &&
+        typeof value.secret === "string" && value.secret.length >= 1 && value.secret.length <= 1024 &&
         typeof value.content === "string" && value.content.length >= 1 && value.content.length <= 20_000_000 &&
         typeof value.replaceConfirmed === "boolean";
     case "SPACE_GET_STATE":

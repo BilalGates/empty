@@ -18,7 +18,8 @@ Chrome CSV import is parsed locally, reviewed before commit, and never written t
 persistent storage as plaintext. Credentials can be edited or tombstoned from global
 search. Encrypted backups require master-password reauthentication and download without
 adding the broad `downloads` permission. A backup can be restored only after local
-authenticated decryption succeeds and current-vault replacement is confirmed; plaintext
+authenticated decryption with its master password or recovery key succeeds and
+current-vault replacement is confirmed; plaintext
 CSV export is intentionally disabled.
 
 ## Build and test

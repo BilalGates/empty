@@ -1,6 +1,6 @@
 import { isAutofillAllowed, normalizeOrigin, originsMatch } from "./origin.js";
 import { isMessage } from "./protocol.js";
-import { createEncryptedVault, importChromeCsv, openEncryptedVaultWithSessionKey, unlockVaultSessionWithPassword, unlockWithPassword, updateEncryptedVaultWithSessionKey } from "@space/core";
+import { createEncryptedVault, importChromeCsv, openEncryptedVaultWithSessionKey, unlockVaultSessionWithPassword, unlockVaultSessionWithRecoveryKey, unlockWithPassword, updateEncryptedVaultWithSessionKey } from "@space/core";
 
 const SESSION_TTL_MS = 5 * 60_000;
 const STORAGE_KEY = "encryptedVault";
@@ -282,7 +282,9 @@ async function handle(message) {
     const restoreGeneration = sessionGeneration;
     try {
       const candidate = JSON.parse(message.content);
-      const unlocked = unlockVaultSessionWithPassword(candidate, message.password);
+      const unlocked = message.method === "password"
+        ? unlockVaultSessionWithPassword(candidate, message.secret)
+        : unlockVaultSessionWithRecoveryKey(candidate, message.secret);
       const document = unlocked.document;
       if (typeof candidate?.vaultId !== "string" || document.vaultId !== candidate.vaultId) throw new Error("vault-mismatch");
       if (sessionGeneration !== restoreGeneration) return { ok: false, error: "locked" };

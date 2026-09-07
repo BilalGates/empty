@@ -200,6 +200,21 @@ export function unlockWithRecoveryKey(vault: EncryptedVault, encodedRecoveryKey:
   finally { wipe(recoveryKey); if (vaultKey) wipe(vaultKey); }
 }
 
+export function unlockVaultSessionWithRecoveryKey(vault: EncryptedVault, encodedRecoveryKey: string): UnlockedVaultSession {
+  const envelope = vault.envelopes.find(candidate => candidate.kind === 'recovery-key');
+  if (!envelope) throw new Error('Recovery envelope unavailable');
+  let recoveryKey: Uint8Array | undefined;
+  let vaultKey: Uint8Array | undefined;
+  try {
+    recoveryKey = fromBase64Url(encodedRecoveryKey);
+    if (recoveryKey.length !== 32 || toBase64Url(recoveryKey) !== encodedRecoveryKey) throw new Error('Invalid recovery key');
+    if (envelope.envelopeVersion !== ENVELOPE_VERSION || envelope.algorithm !== 'xchacha20-poly1305') throw new Error('Invalid envelope');
+    vaultKey = decrypt(recoveryKey, envelope.nonce, envelope.ciphertext, recoveryAad(vault.vaultId), WRAPPED_KEY_CIPHERTEXT_BYTES);
+    return { document: openWithKey(vault, vaultKey), vaultKey: toBase64Url(vaultKey) };
+  } catch { throw new Error('Unable to recover vault'); }
+  finally { if (recoveryKey) wipe(recoveryKey); if (vaultKey) wipe(vaultKey); }
+}
+
 export function updateEncryptedVault(vault: EncryptedVault, password: string, document: VaultDocument): EncryptedVault {
   assertVaultDocument(document);
   if (document.vaultId !== vault.vaultId) throw new Error('Vault context mismatch');

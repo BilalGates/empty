@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { VaultDocument } from '@space/protocol';
-import { changeMasterPassword, createEncryptedVault, generatePassword, importChromeCsv, matchesOrigin, openEncryptedVaultWithSessionKey, unlockVaultSessionWithPassword, unlockWithPassword, unlockWithRecoveryKey, updateEncryptedVault, updateEncryptedVaultWithSessionKey } from './index.js';
+import { changeMasterPassword, createEncryptedVault, generatePassword, importChromeCsv, matchesOrigin, openEncryptedVaultWithSessionKey, unlockVaultSessionWithPassword, unlockVaultSessionWithRecoveryKey, unlockWithPassword, unlockWithRecoveryKey, updateEncryptedVault, updateEncryptedVaultWithSessionKey } from './index.js';
 
 const testCost = { memoryKiB: 64 * 1024, iterations: 3, parallelism: 1 };
 const yieldWorker = (): Promise<void> => new Promise(resolve => setImmediate(resolve));
@@ -74,6 +74,10 @@ describe('vault cryptography', { timeout: 60_000 }, () => {
     expect(unlocked.document).toEqual(document);
     expect(unlocked.vaultKey).not.toContain('correct horse battery staple');
     expect(openEncryptedVaultWithSessionKey(created.vault, unlocked.vaultKey)).toEqual(document);
+    const recovered = unlockVaultSessionWithRecoveryKey(created.vault, created.recoveryKey);
+    expect(recovered.document).toEqual(document);
+    expect(recovered.vaultKey).toBe(unlocked.vaultKey);
+    expect(() => unlockVaultSessionWithRecoveryKey(created.vault, 'AA')).toThrow();
     const updatedDocument = { ...document, revision: 1, updatedAt: '2026-01-03T00:00:00.000Z' };
     const updated = updateEncryptedVaultWithSessionKey(created.vault, unlocked.vaultKey, updatedDocument);
     expect(unlockWithPassword(updated, 'correct horse battery staple')).toEqual(updatedDocument);
