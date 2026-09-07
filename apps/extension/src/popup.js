@@ -78,7 +78,35 @@ function vaultAccess(hasVault) {
     } else await refresh();
   });
   content.append(heading, form);
+  appendRestoreBackup(hasVault);
   password.input.focus();
+}
+
+function appendRestoreBackup(hasVault) {
+  const restore = document.createElement("details");
+  const restoreSummary = document.createElement("summary"); restoreSummary.textContent = "Restore encrypted backup";
+  const restoreCopy = document.createElement("p"); restoreCopy.className = "muted"; restoreCopy.textContent = "Space validates and decrypts the backup locally before replacing anything.";
+  const restoreFile = inputField("Space backup", "file", "restore-file"); restoreFile.input.accept = ".json,application/json";
+  const restorePassword = inputField("Backup master password", "password", "restore-password", { autocomplete: "current-password" });
+  const replacement = document.createElement("label");
+  const replacementCheck = document.createElement("input"); replacementCheck.type = "checkbox"; replacementCheck.required = hasVault;
+  replacement.append(replacementCheck, document.createTextNode(hasVault ? " Replace the current vault" : " Restore this vault"));
+  const restoreButton = document.createElement("button"); restoreButton.type = "button"; restoreButton.className = "secondary"; restoreButton.textContent = "Validate and restore";
+  const restoreFeedback = document.createElement("p"); restoreFeedback.className = "form-error"; restoreFeedback.setAttribute("role", "alert");
+  restoreButton.addEventListener("click", async () => {
+    const file = restoreFile.input.files?.[0]; restoreFeedback.textContent = "";
+    if (!file) { restoreFeedback.textContent = "Choose an encrypted Space backup first."; return; }
+    if (file.size > 20_000_000) { restoreFeedback.textContent = "The backup exceeds the 20 MB restore limit."; return; }
+    if (hasVault && !replacementCheck.checked) { restoreFeedback.textContent = "Confirm replacement of the current vault."; return; }
+    restoreButton.disabled = true; restoreButton.textContent = "Validating…";
+    const response = await chrome.runtime.sendMessage({ type: "SPACE_RESTORE_BACKUP", ...context, password: restorePassword.input.value, content: await file.text(), replaceConfirmed: !hasVault || replacementCheck.checked });
+    restorePassword.input.value = ""; restoreFile.input.value = "";
+    if (response?.ok) { restoreFeedback.textContent = `${response.restored} credentials restored.`; setTimeout(refresh, 800); return; }
+    restoreButton.disabled = false; restoreButton.textContent = "Validate and restore";
+    restoreFeedback.textContent = response?.error === "confirmation-required" ? "Confirm replacement of the current vault." : "The backup or its master password is invalid.";
+  });
+  restore.append(restoreSummary, restoreCopy, restoreFile.label, restorePassword.label, replacement, restoreButton, restoreFeedback);
+  content.append(restore);
 }
 
 function appendVaultActions() {
@@ -144,7 +172,9 @@ function appendVaultActions() {
   backup.append(backupSummary, backupCopy, backupPassword.label, download, backupFeedback);
   const lock = document.createElement("button"); lock.type = "button"; lock.className = "text-button"; lock.textContent = "Lock Space";
   lock.addEventListener("click", async () => { await chrome.runtime.sendMessage({ type: "SPACE_LOCK" }); await refresh(); });
-  content.append(details, importer, backup, lock);
+  content.append(details, importer, backup);
+  appendRestoreBackup(true);
+  content.append(lock);
 }
 
 function regeneratePassword() {

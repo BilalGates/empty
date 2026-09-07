@@ -67,6 +67,9 @@ try {
   assert(!rejectedUnlock.ok, 'Wrong master password unlocked the vault');
   const unlocked = await control.evaluate((password) => chrome.runtime.sendMessage({ type: 'SPACE_UNLOCK', password }), master);
   assert(unlocked.ok, 'Correct master password did not unlock the vault');
+  const unlockedStorage = await control.evaluate(() => chrome.storage.session.get('unlockedSession'));
+  assert(typeof unlockedStorage.unlockedSession?.vaultKey === 'string', 'Unlocked session did not retain the vault key');
+  assert(!JSON.stringify(unlockedStorage).includes(master) && !('password' in unlockedStorage.unlockedSession) && !('document' in unlockedStorage.unlockedSession), 'Unlocked session retained master password or plaintext document');
   const page = await context.newPage();
 
   await page.goto(`${baseUrl}/traditional-login.html`);
@@ -204,6 +207,26 @@ try {
     return chrome.runtime.sendMessage({ type: 'SPACE_GET_STATE', tabId: tab.id, origin: currentOrigin });
   }, { origin });
   assert(afterDelete.state === 'empty' && afterDelete.credentials.length === 0 && afterDelete.allCredentials.length === 1, 'Deleted credential remained indexed');
+  const rejectedRestore = await control.evaluate(async ({ origin: currentOrigin, content, password }) => {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    return chrome.runtime.sendMessage({ type: 'SPACE_RESTORE_BACKUP', tabId: tab.id, origin: currentOrigin, content, password, replaceConfirmed: true });
+  }, { origin, content: backup.content, password: wrongMaster });
+  assert(!rejectedRestore.ok && rejectedRestore.error === 'invalid-backup', 'Backup restore accepted an incorrect password');
+  const stateAfterRejectedRestore = await control.evaluate(async ({ origin: currentOrigin }) => {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    return chrome.runtime.sendMessage({ type: 'SPACE_GET_STATE', tabId: tab.id, origin: currentOrigin });
+  }, { origin });
+  assert(stateAfterRejectedRestore.state === 'empty', 'Rejected restore changed the current vault');
+  const restoredBackup = await control.evaluate(async ({ origin: currentOrigin, content, password }) => {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    return chrome.runtime.sendMessage({ type: 'SPACE_RESTORE_BACKUP', tabId: tab.id, origin: currentOrigin, content, password, replaceConfirmed: true });
+  }, { origin, content: backup.content, password: master });
+  assert(restoredBackup.ok && restoredBackup.restored === 2, 'Encrypted backup restore failed');
+  const stateAfterRestore = await control.evaluate(async ({ origin: currentOrigin }) => {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    return chrome.runtime.sendMessage({ type: 'SPACE_GET_STATE', tabId: tab.id, origin: currentOrigin });
+  }, { origin });
+  assert(stateAfterRestore.state === 'populated' && stateAfterRestore.allCredentials.length === 2, 'Restored credentials were not available');
 
   await page.goto(`${baseUrl}/dynamic-login.html`);
   await page.locator('#add').click();
@@ -223,7 +246,7 @@ try {
     credential: { username: '', password: 'test-value' }
   });
   assert(guarded.error === 'confirmation-required', 'Signup fill did not require confirmation');
-  console.log('Chrome MV3 E2E passed: encrypted vault, session restore, local import, backup reauth, edit/delete, plaintext guards, fill, dynamic, SPA, signup guard, exact-origin rejection.');
+  console.log('Chrome MV3 E2E passed: encrypted vault, key-only session, session restore, local import, backup reauth/restore, edit/delete, plaintext guards, fill, dynamic, SPA, signup guard, exact-origin rejection.');
 } finally {
   if (context) await context.close();
   await new Promise((resolveClose) => server.close(resolveClose));

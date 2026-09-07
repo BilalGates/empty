@@ -1,6 +1,6 @@
 import { isAutofillAllowed, normalizeOrigin, originsMatch } from "./origin.js";
 import { isMessage } from "./protocol.js";
-import { createEncryptedVault, importChromeCsv, unlockWithPassword, updateEncryptedVault } from "@space/core";
+import { createEncryptedVault, importChromeCsv, openEncryptedVaultWithSessionKey, unlockVaultSessionWithPassword, unlockWithPassword, updateEncryptedVaultWithSessionKey } from "@space/core";
 
 const SESSION_TTL_MS = 5 * 60_000;
 const STORAGE_KEY = "encryptedVault";
@@ -49,18 +49,23 @@ async function restoreSession() {
   const stored = (await chrome.storage.session.get(SESSION_KEY))[SESSION_KEY];
   const now = Date.now();
   const remaining = stored?.expiresAt - now;
-  if (!stored || typeof stored !== "object" || !Number.isSafeInteger(stored.issuedAt) || !Number.isSafeInteger(stored.expiresAt) || now < stored.issuedAt || remaining <= 0 || remaining > SESSION_TTL_MS || typeof stored.password !== "string" || !stored.document) {
+  if (!stored || typeof stored !== "object" || !Number.isSafeInteger(stored.issuedAt) || !Number.isSafeInteger(stored.expiresAt) || now < stored.issuedAt || remaining <= 0 || remaining > SESSION_TTL_MS || typeof stored.vaultKey !== "string") {
     await expireSession(); return;
   }
-  sessionGeneration += 1;
-  session = { document: stored.document, password: stored.password, credentials: credentialIndex(stored.document), issuedAt: stored.issuedAt, expiresAt: stored.expiresAt, deadline: performance.now() + remaining, generation: sessionGeneration };
+  try {
+    const vault = await readStoredVault();
+    if (!vault) throw new Error("vault-missing");
+    const document = openEncryptedVaultWithSessionKey(vault, stored.vaultKey);
+    sessionGeneration += 1;
+    session = { document, vaultKey: stored.vaultKey, credentials: credentialIndex(document), issuedAt: stored.issuedAt, expiresAt: stored.expiresAt, deadline: performance.now() + remaining, generation: sessionGeneration };
+  } catch { await expireSession(); return; }
   await chrome.alarms.create(SESSION_EXPIRY_ALARM, { when: session.expiresAt });
 }
 
 async function persistSession() {
   if (!session) { await expireSession(); return; }
   const activeSession = session;
-  await chrome.storage.session.set({ [SESSION_KEY]: { document: activeSession.document, password: activeSession.password, issuedAt: activeSession.issuedAt, expiresAt: activeSession.expiresAt } });
+  await chrome.storage.session.set({ [SESSION_KEY]: { vaultKey: activeSession.vaultKey, issuedAt: activeSession.issuedAt, expiresAt: activeSession.expiresAt } });
   if (session !== activeSession || sessionGeneration !== activeSession.generation) {
     await chrome.storage.session.remove(SESSION_KEY);
     return;
@@ -97,10 +102,10 @@ const credentialIndex = (document) => document.items
   .filter((item) => item.kind === "password" && !item.deletedAt)
   .map((item) => ({ id: item.id, label: item.title, username: item.username, password: item.password, origins: item.origins }));
 
-async function openSession(document, password) {
+async function openSession(document, vaultKey) {
   const issuedAt = Date.now();
   sessionGeneration += 1;
-  session = { document, password, credentials: credentialIndex(document), issuedAt, expiresAt: issuedAt + SESSION_TTL_MS, deadline: performance.now() + SESSION_TTL_MS, generation: sessionGeneration };
+  session = { document, vaultKey, credentials: credentialIndex(document), issuedAt, expiresAt: issuedAt + SESSION_TTL_MS, deadline: performance.now() + SESSION_TTL_MS, generation: sessionGeneration };
   await persistSession();
 }
 
@@ -112,9 +117,9 @@ async function readStoredVault() {
 async function persistDocument(document) {
   const vault = await readStoredVault();
   if (!vault || !session) { session = null; await persistSession(); return false; }
-  const updated = updateEncryptedVault(vault, session.password, document);
+  const updated = updateEncryptedVaultWithSessionKey(vault, session.vaultKey, document);
   await chrome.storage.local.set({ [STORAGE_KEY]: updated });
-  await openSession(document, session.password);
+  await openSession(document, session.vaultKey);
   return true;
 }
 
@@ -159,15 +164,16 @@ async function handle(message) {
     const document = { formatVersion: 1, vaultId: crypto.randomUUID(), revision: 0, createdAt: now, updatedAt: now, groups: [], items: [] };
     const created = createEncryptedVault(document, message.password);
     await chrome.storage.local.set({ [STORAGE_KEY]: created.vault });
-    await openSession(document, message.password);
+    const unlocked = unlockVaultSessionWithPassword(created.vault, message.password);
+    await openSession(unlocked.document, unlocked.vaultKey);
     return { ok: true, recoveryKey: created.recoveryKey };
   }
   if (message.type === "SPACE_UNLOCK") {
     const vault = await readStoredVault();
     if (!vault) return { ok: false, error: "vault-missing" };
     try {
-      const document = unlockWithPassword(vault, message.password);
-      await openSession(document, message.password);
+      const unlocked = unlockVaultSessionWithPassword(vault, message.password);
+      await openSession(unlocked.document, unlocked.vaultKey);
       return { ok: true };
     } catch {
       return { ok: false, error: "invalid-credentials" };
@@ -269,6 +275,25 @@ async function handle(message) {
       if (session !== activeSession || !activeSession || sessionGeneration !== activeSession.generation || !sessionIsActive(activeSession)) return { ok: false, error: "locked" };
       return { ok: true, filename: "space-backup.json", content: JSON.stringify(vault) };
     } catch { return { ok: false, error: "invalid-credentials" }; }
+  }
+  if (message.type === "SPACE_RESTORE_BACKUP") {
+    const existingVault = await readStoredVault();
+    if (existingVault && !message.replaceConfirmed) return { ok: false, error: "confirmation-required" };
+    const restoreGeneration = sessionGeneration;
+    try {
+      const candidate = JSON.parse(message.content);
+      const unlocked = unlockVaultSessionWithPassword(candidate, message.password);
+      const document = unlocked.document;
+      if (typeof candidate?.vaultId !== "string" || document.vaultId !== candidate.vaultId) throw new Error("vault-mismatch");
+      if (sessionGeneration !== restoreGeneration) return { ok: false, error: "locked" };
+      await chrome.storage.local.set({ [STORAGE_KEY]: candidate });
+      if (sessionGeneration !== restoreGeneration) return { ok: false, error: "locked" };
+      await openSession(document, unlocked.vaultKey);
+      if (!sessionIsActive() || session?.document.vaultId !== document.vaultId) return { ok: false, error: "locked" };
+      return { ok: true, restored: credentialIndex(document).length };
+    } catch {
+      return { ok: false, error: "invalid-backup" };
+    }
   }
   if (message.type === "SPACE_FILL_GENERATED") {
     await ensureContent(message.tabId);

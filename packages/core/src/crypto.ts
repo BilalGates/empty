@@ -143,6 +143,49 @@ export function unlockWithPassword(vault: EncryptedVault, password: string): Vau
   finally { wipe(key); if (vaultKey) wipe(vaultKey); }
 }
 
+export interface UnlockedVaultSession {
+  document: VaultDocument;
+  vaultKey: string;
+}
+
+export function unlockVaultSessionWithPassword(vault: EncryptedVault, password: string): UnlockedVaultSession {
+  const envelope = vault.envelopes.find(candidate => candidate.kind === 'master-password');
+  if (!envelope?.kdf) throw new Error('Master-password envelope unavailable');
+  if (envelope.envelopeVersion !== ENVELOPE_VERSION || envelope.algorithm !== 'xchacha20-poly1305') throw new Error('Unable to unlock vault');
+  const key = derivePasswordKey(password, envelope.kdf);
+  let vaultKey: Uint8Array | undefined;
+  try {
+    vaultKey = decrypt(key, envelope.nonce, envelope.ciphertext, passwordAad(vault.vaultId, envelope.kdf), WRAPPED_KEY_CIPHERTEXT_BYTES);
+    return { document: openWithKey(vault, vaultKey), vaultKey: toBase64Url(vaultKey) };
+  } catch { throw new Error('Unable to unlock vault'); }
+  finally { wipe(key); if (vaultKey) wipe(vaultKey); }
+}
+
+export function openEncryptedVaultWithSessionKey(vault: EncryptedVault, encodedVaultKey: string): VaultDocument {
+  let vaultKey: Uint8Array | undefined;
+  try {
+    vaultKey = decodeCanonical(encodedVaultKey, 32, 'vault key');
+    if (vaultKey.length !== 32) throw new Error('Invalid vault key');
+    return openWithKey(vault, vaultKey);
+  } catch { throw new Error('Unable to unlock vault'); }
+  finally { if (vaultKey) wipe(vaultKey); }
+}
+
+export function updateEncryptedVaultWithSessionKey(vault: EncryptedVault, encodedVaultKey: string, document: VaultDocument): EncryptedVault {
+  assertVaultDocument(document);
+  if (document.vaultId !== vault.vaultId) throw new Error('Vault context mismatch');
+  if (document.revision <= vault.revision) throw new Error('Vault revision must increase');
+  let vaultKey: Uint8Array | undefined;
+  try {
+    vaultKey = decodeCanonical(encodedVaultKey, 32, 'vault key');
+    if (vaultKey.length !== 32) throw new Error('Invalid vault key');
+    openWithKey(vault, vaultKey);
+    const payload = encrypt(vaultKey, utf8(canonicalJson(document)), payloadAad(document.vaultId, document.revision));
+    return { ...vault, revision: document.revision, ...payload };
+  } catch { throw new Error('Unable to update vault'); }
+  finally { if (vaultKey) wipe(vaultKey); }
+}
+
 export function unlockWithRecoveryKey(vault: EncryptedVault, encodedRecoveryKey: string): VaultDocument {
   const envelope = vault.envelopes.find(candidate => candidate.kind === 'recovery-key');
   if (!envelope) throw new Error('Recovery envelope unavailable');

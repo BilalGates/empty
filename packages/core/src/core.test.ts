@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { VaultDocument } from '@space/protocol';
-import { changeMasterPassword, createEncryptedVault, generatePassword, importChromeCsv, matchesOrigin, unlockWithPassword, unlockWithRecoveryKey, updateEncryptedVault } from './index.js';
+import { changeMasterPassword, createEncryptedVault, generatePassword, importChromeCsv, matchesOrigin, openEncryptedVaultWithSessionKey, unlockVaultSessionWithPassword, unlockWithPassword, unlockWithRecoveryKey, updateEncryptedVault, updateEncryptedVaultWithSessionKey } from './index.js';
 
 const testCost = { memoryKiB: 64 * 1024, iterations: 3, parallelism: 1 };
 const yieldWorker = (): Promise<void> => new Promise(resolve => setImmediate(resolve));
@@ -65,6 +65,22 @@ describe('vault cryptography', { timeout: 60_000 }, () => {
     expect(() => updateEncryptedVault(created.vault, 'wrong password value', updatedDocument)).toThrow('Unable to update');
     await yieldWorker();
     expect(() => updateEncryptedVault(created.vault, 'correct horse battery staple', document)).toThrow('revision');
+  });
+
+  it('reuses only a validated vault session key for unlocked mutations', async () => {
+    const created = createEncryptedVault(document, 'correct horse battery staple', testCost);
+    await yieldWorker();
+    const unlocked = unlockVaultSessionWithPassword(created.vault, 'correct horse battery staple');
+    expect(unlocked.document).toEqual(document);
+    expect(unlocked.vaultKey).not.toContain('correct horse battery staple');
+    expect(openEncryptedVaultWithSessionKey(created.vault, unlocked.vaultKey)).toEqual(document);
+    const updatedDocument = { ...document, revision: 1, updatedAt: '2026-01-03T00:00:00.000Z' };
+    const updated = updateEncryptedVaultWithSessionKey(created.vault, unlocked.vaultKey, updatedDocument);
+    expect(unlockWithPassword(updated, 'correct horse battery staple')).toEqual(updatedDocument);
+    await yieldWorker();
+    expect(() => openEncryptedVaultWithSessionKey(created.vault, 'AA')).toThrow('Unable to unlock');
+    expect(() => openEncryptedVaultWithSessionKey(created.vault, '!')).toThrow('Unable to unlock');
+    expect(() => updateEncryptedVaultWithSessionKey(created.vault, 'AA', updatedDocument)).toThrow();
   });
 
   it('rejects KDF downgrade, oversized cost, invalid salt, and oversized passwords before derivation', async () => {
