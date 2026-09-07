@@ -3,13 +3,23 @@ import SpaceShared
 
 struct CredentialEditorView: View {
     let model: VaultViewModel
+    let credential: VaultCredential?
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
-    @State private var title = ""
-    @State private var website = ""
-    @State private var username = ""
-    @State private var password = ""
+    @State private var title: String
+    @State private var website: String
+    @State private var username: String
+    @State private var password: String
     @State private var attempted = false
+
+    init(model: VaultViewModel, credential: VaultCredential? = nil) {
+        self.model = model
+        self.credential = credential
+        _title = State(initialValue: credential?.title ?? "")
+        _website = State(initialValue: credential?.serviceIdentifier ?? "")
+        _username = State(initialValue: credential?.username ?? "")
+        _password = State(initialValue: credential?.password ?? "")
+    }
 
     var body: some View {
         NavigationStack {
@@ -36,7 +46,7 @@ struct CredentialEditorView: View {
                     }
                 }
             }
-            .navigationTitle("New login")
+            .navigationTitle(credential == nil ? "New login" : "Edit login")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -46,12 +56,23 @@ struct CredentialEditorView: View {
                     Button(model.isSaving ? "Saving…" : "Save") {
                         attempted = true
                         Task {
-                            if await model.addCredential(
-                                title: title,
-                                serviceIdentifier: website,
-                                username: username,
-                                password: password
-                            ) {
+                            let saved = if let credential {
+                                await model.updateCredential(
+                                    id: credential.id,
+                                    title: title,
+                                    serviceIdentifier: website,
+                                    username: username,
+                                    password: password
+                                )
+                            } else {
+                                await model.addCredential(
+                                    title: title,
+                                    serviceIdentifier: website,
+                                    username: username,
+                                    password: password
+                                )
+                            }
+                            if saved {
                                 password.removeAll(keepingCapacity: false)
                                 dismiss()
                             }

@@ -13,12 +13,16 @@ xcodebuild -project Space.xcodeproj -scheme Space \
 
 The local cache format `space.ios.local-cache/1` is intentionally not the interoperable
 `space.vault/1` protocol. It uses CryptoKit AES-GCM solely as a representative encrypted
-App Group cache while the project selects and audits an iOS XChaCha20-Poly1305 dependency
-and lands the shared CBOR/vector corpus. Do not sync this cache file or treat it as a V1
-wire artifact.
+App Group cache. `SpaceVaultPrimitiveSuite` now validates the normative Argon2id,
+HKDF-SHA-256, and XChaCha20-Poly1305-IETF primitives against vectors, using the immutable
+dependencies recorded in `DEPENDENCIES.md`. It remains disconnected from persistence
+until deterministic CBOR/AAD, per-object envelopes, signatures, and checkpoints have
+their complete shared vector corpus. Do not sync the local cache file or treat it as a
+V1 wire artifact.
 
-`SpaceSyncClient` now implements the authenticated opaque `/v1/session`, `/v1/sync/push`,
-and `/v1/sync/pull` transport. Its device credential is stored by
+`SpaceSyncClient` now implements authenticated `/v1/session`, fail-closed
+`/v1/bootstrap/bind`, and canonical
+`/v1/vaults/{vaultId}/sync/{push,pull}` transport. Its device credential is stored by
 `KeychainDeviceSessionStore` as a this-device-only Keychain item, and remote endpoints
 must use HTTPS (debug builds permit loopback HTTP). The transport deliberately does not
 feed remote records into the local AES-GCM cache: that remains blocked until the iOS

@@ -9,6 +9,13 @@ settings:
     SWIFT_VERSION: "6.0"
     DEVELOPMENT_TEAM: ""
     CODE_SIGN_STYLE: Automatic
+packages:
+  Clibsodium:
+    url: https://github.com/jedisct1/swift-sodium.git
+    revision: cfd195c76882aa9b997560ca7cb95d72fbf5db00
+  Argon2Reference:
+    url: https://github.com/P-H-C/phc-winner-argon2.git
+    revision: f57e61e19229e23c4445b85494dbf7c07de721cb
 targets:
   SpaceShared:
     type: framework
@@ -19,6 +26,11 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.space.shared
         APPLICATION_EXTENSION_API_ONLY: YES
         SKIP_INSTALL: YES
+    dependencies:
+      - package: Clibsodium
+        product: Clibsodium
+      - package: Argon2Reference
+        product: argon2
   Space:
     type: application
     platform: iOS
@@ -61,7 +73,10 @@ targets:
   SpaceSharedTests:
     type: bundle.unit-test
     platform: iOS
-    sources: [Tests/SpaceSharedTests]
+    sources:
+      - path: Tests/SpaceSharedTests
+      - path: ../../test-vectors
+        buildPhase: resources
     dependencies:
       - target: SpaceShared
     settings:

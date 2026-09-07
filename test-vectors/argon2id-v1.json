@@ -3,11 +3,6 @@
   "purpose": "password-slot-argon2id",
   "inputUtf8Hex": "537061636520766563746f722070617373776f72642032303236",
   "saltHex": "000102030405060708090a0b0c0d0e0f",
-  "parameters": {
-    "memoryKiB": 65536,
-    "iterations": 3,
-    "parallelism": 4,
-    "outputBytes": 32
-  },
+  "parameters": { "memoryKiB": 65536, "iterations": 3, "parallelism": 4, "outputBytes": 32 },
   "outputHex": "40a6138b07ab0d8f1e0d31732c5b74c7d37484f3730e8fa812a591e623025d33"
 }

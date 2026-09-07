@@ -126,22 +126,30 @@ public actor SpaceSyncClient {
     public static let maximumResponseSize = 2 * 1_024 * 1_024
     private let configuration: SpaceDeviceSession
     private let session: URLSession
+    // URLSession retains its delegate, and this explicit reference makes the security
+    // policy lifetime obvious and independently testable.
+    private let redirectDelegate: RejectRedirectsDelegate
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
 
-    public init(configuration: SpaceDeviceSession, session: URLSession? = nil) {
+    public init(
+        configuration: SpaceDeviceSession,
+        urlSessionConfiguration suppliedConfiguration: URLSessionConfiguration? = nil
+    ) {
         self.configuration = configuration
-        if let session {
-            self.session = session
-        } else {
-            let urlConfiguration = URLSessionConfiguration.ephemeral
-            urlConfiguration.requestCachePolicy = .reloadIgnoringLocalCacheData
-            urlConfiguration.urlCache = nil
-            urlConfiguration.httpShouldSetCookies = false
-            urlConfiguration.timeoutIntervalForRequest = 30
-            urlConfiguration.timeoutIntervalForResource = 60
-            self.session = URLSession(configuration: urlConfiguration)
-        }
+        let urlConfiguration = suppliedConfiguration ?? URLSessionConfiguration.ephemeral
+        urlConfiguration.requestCachePolicy = .reloadIgnoringLocalCacheData
+        urlConfiguration.urlCache = nil
+        urlConfiguration.httpShouldSetCookies = false
+        urlConfiguration.timeoutIntervalForRequest = 30
+        urlConfiguration.timeoutIntervalForResource = 60
+        let redirectDelegate = RejectRedirectsDelegate()
+        self.redirectDelegate = redirectDelegate
+        self.session = URLSession(
+            configuration: urlConfiguration,
+            delegate: redirectDelegate,
+            delegateQueue: nil
+        )
     }
 
     public func identity() async throws -> RemoteSessionIdentity {
@@ -149,19 +157,23 @@ public actor SpaceSyncClient {
     }
 
     public func verifyIdentity(expectedVaultID: UUID) async throws -> RemoteSessionIdentity {
-        let remote = try await identity()
+        let remote: RemoteSessionIdentity = try await send(
+            path: "v1/bootstrap/bind",
+            method: "POST",
+            body: encoder.encode(BootstrapBindRequest(expectedVaultId: expectedVaultID))
+        )
         guard remote.vaultId == expectedVaultID else { throw SpaceSyncError.vaultMismatch }
         return remote
     }
 
-    public func push(_ mutations: [OpaqueSyncMutation]) async throws -> PushResult {
+    public func push(_ mutations: [OpaqueSyncMutation], vaultID: UUID) async throws -> PushResult {
         guard (1...100).contains(mutations.count),
               Set(mutations.map(\.mutationId)).count == mutations.count,
               Set(mutations.map(\.itemId)).count == mutations.count else {
             throw SpaceSyncError.invalidRequest
         }
         let result: PushResult = try await send(
-            path: "v1/sync/push",
+            path: Self.syncPath(vaultID: vaultID, operation: "push"),
             method: "POST",
             body: encoder.encode(PushRequest(mutations: mutations))
         )
@@ -183,10 +195,10 @@ public actor SpaceSyncClient {
         return result
     }
 
-    public func pull(after cursor: Int, limit: Int = 200) async throws -> PullResult {
+    public func pull(after cursor: Int, limit: Int = 200, vaultID: UUID) async throws -> PullResult {
         guard cursor >= 0, (1...500).contains(limit) else { throw SpaceSyncError.invalidRequest }
         let result: PullResult = try await send(
-            path: "v1/sync/pull",
+            path: Self.syncPath(vaultID: vaultID, operation: "pull"),
             method: "GET",
             query: [
                 URLQueryItem(name: "cursor", value: String(cursor)),
@@ -216,6 +228,11 @@ public actor SpaceSyncClient {
             throw SpaceSyncError.unexpectedResponse
         }
         return result
+    }
+
+    static func syncPath(vaultID: UUID, operation: String) -> String {
+        precondition(operation == "push" || operation == "pull")
+        return "v1/vaults/\(vaultID.uuidString.lowercased())/sync/\(operation)"
     }
 
     private func send<Response: Decodable>(
@@ -267,6 +284,24 @@ public actor SpaceSyncClient {
     }
 }
 
+final class RejectRedirectsDelegate: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
+    func urlSession(
+        _ session: URLSession,
+        task: URLSessionTask,
+        willPerformHTTPRedirection response: HTTPURLResponse,
+        newRequest request: URLRequest,
+        completionHandler: @escaping (URLRequest?) -> Void
+    ) {
+        // Reject every status and destination, including same-origin 307/308, so bearer
+        // tokens, ciphertext bodies, and idempotency identifiers are never replayed.
+        completionHandler(nil)
+    }
+}
+
 private struct PushRequest: Codable, Sendable {
     let mutations: [OpaqueSyncMutation]
+}
+
+private struct BootstrapBindRequest: Codable, Sendable {
+    let expectedVaultId: UUID
 }

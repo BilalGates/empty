@@ -63,11 +63,14 @@ AutoFill identity suggestions. Those require a signed build on a passcode-protec
 ## Security limitations and release blockers
 
 - `space.ios.local-cache/1` is local scaffolding, not the normative `space.vault/1`
-  XChaCha20-Poly1305/CBOR format. Production sync is blocked until Security approves a
-  maintained XChaCha implementation, deterministic CBOR, and the common positive/negative
-  vector corpus. Do not substitute AES-GCM for V1 without a new versioned suite and ADR.
+  per-object format. Argon2id, HKDF, and XChaCha primitives now use pinned reference or
+  libsodium implementations and initial positive/negative vectors. Production persistence
+  remains blocked until Security approves deterministic CBOR/AAD, complete envelope,
+  signature/checkpoint vectors, and the macOS dependency resolution evidence recorded in
+  `apps/ios/DEPENDENCIES.md`. Do not substitute AES-GCM for V1 without a new versioned
+  suite and ADR.
 The locally generated vault identity must be bound to authenticated account bootstrap before multiple accounts are supported. It is public context, not a key, but an unauthenticated local identity does not prove server-side account or vault ownership.
-- Master-password Argon2id, recovery, device transfer, signed sync/checkpoints, imports, and
+- Master-password enrollment, recovery, device transfer, signed sync/checkpoints, and
   revocation transport are not implemented by this scaffold. Biometric unlock is not a
   recovery mechanism.
 - Swift's `Data`, `String`, Codable, SwiftUI, and UIKit make copies that cannot be reliably

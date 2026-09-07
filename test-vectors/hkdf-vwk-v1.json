@@ -1,0 +1,9 @@
+{
+  "suite": "space.vault/1",
+  "purpose": "vault-wrap-key-hkdf-sha256",
+  "ikmHex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+  "saltHex": "a0a1a2a3a4a5a6a7a8a9aaabacadaeaf",
+  "infoHex": "73706163652f76776b2f7631",
+  "outputBytes": 32,
+  "outputHex": "7fe89ab03c203dfe746ebb88b1017e33cd9478c53dc4f06c3d7e55de5c693f9c"
+}

@@ -11,26 +11,31 @@ struct CredentialDetailView: View {
     @State private var revealingPassword = false
     @State private var copiedField: String?
     @State private var confirmingDelete = false
+    @State private var showingEditor = false
+
+    private var currentCredential: VaultCredential {
+        model.credentials.first(where: { $0.id == credential.id }) ?? credential
+    }
 
     var body: some View {
         List {
             Section("Website") {
-                Text(credential.serviceIdentifier)
+                Text(currentCredential.serviceIdentifier)
                     .textSelection(.enabled)
             }
             Section("Username") {
                 SecretRow(
-                    value: credential.username,
+                    value: currentCredential.username,
                     concealed: false,
                     actionName: "Copy username"
-                ) { copy(credential.username, field: "Username") }
+                ) { copy(currentCredential.username, field: "Username") }
             }
             Section("Password") {
                 SecretRow(
-                    value: revealingPassword ? credential.password : String(repeating: "•", count: 12),
+                    value: revealingPassword ? currentCredential.password : String(repeating: "•", count: 12),
                     concealed: !revealingPassword,
                     actionName: "Copy password"
-                ) { copy(credential.password, field: "Password") }
+                ) { copy(currentCredential.password, field: "Password") }
                 Button(revealingPassword ? "Hide password" : "Show password") {
                     revealingPassword.toggle()
                     if revealingPassword {
@@ -52,9 +57,17 @@ struct CredentialDetailView: View {
                 Button("Delete login", role: .destructive) { confirmingDelete = true }
             }
         }
-        .navigationTitle(credential.title)
+        .navigationTitle(currentCredential.title)
         .navigationBarTitleDisplayMode(.inline)
         .privacySensitive()
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button("Edit") { showingEditor = true }
+            }
+        }
+        .sheet(isPresented: $showingEditor) {
+            CredentialEditorView(model: model, credential: currentCredential)
+        }
         .confirmationDialog(
             "Delete this login?",
             isPresented: $confirmingDelete,
@@ -82,6 +95,12 @@ struct CredentialDetailView: View {
                 .expirationDate: Date().addingTimeInterval(60)
             ]
         )
+        let copiedChangeCount = UIPasteboard.general.changeCount
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(60))
+            guard UIPasteboard.general.changeCount == copiedChangeCount else { return }
+            UIPasteboard.general.items = []
+        }
         copiedField = field
     }
 }

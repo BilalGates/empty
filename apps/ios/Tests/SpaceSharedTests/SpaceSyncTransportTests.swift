@@ -69,6 +69,44 @@ final class SpaceSyncTransportTests: XCTestCase {
         )
     }
 
+    func testCanonicalSyncPathIsScopedToUUIDVault() {
+        let vaultID = UUID(uuidString: "d8f06711-301f-4a5e-8a9a-89d39f0f8d42")!
+        XCTAssertEqual(
+            SpaceSyncClient.syncPath(vaultID: vaultID, operation: "push"),
+            "v1/vaults/d8f06711-301f-4a5e-8a9a-89d39f0f8d42/sync/push"
+        )
+        XCTAssertEqual(
+            SpaceSyncClient.syncPath(vaultID: vaultID, operation: "pull"),
+            "v1/vaults/d8f06711-301f-4a5e-8a9a-89d39f0f8d42/sync/pull"
+        )
+    }
+
+    func testRedirectDelegateRejects302And307WithoutForwardingRequest() throws {
+        let delegate = RejectRedirectsDelegate()
+        let session = URLSession(configuration: .ephemeral)
+        defer { session.invalidateAndCancel() }
+        let original = URLRequest(url: URL(string: "https://sync.example.com/v1/session")!)
+        let redirected = URLRequest(url: URL(string: "https://attacker.example/collect")!)
+        let task = session.dataTask(with: original)
+
+        for status in [302, 307] {
+            let response = try XCTUnwrap(HTTPURLResponse(
+                url: original.url!,
+                statusCode: status,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["Location": redirected.url!.absoluteString]
+            ))
+            var forwardedRequest: URLRequest? = redirected
+            delegate.urlSession(
+                session,
+                task: task,
+                willPerformHTTPRedirection: response,
+                newRequest: redirected
+            ) { forwardedRequest = $0 }
+            XCTAssertNil(forwardedRequest, "HTTP \(status) must not reach the second endpoint")
+        }
+    }
+
     private func mutation(
         ciphertext: String?,
         nonce: String?,

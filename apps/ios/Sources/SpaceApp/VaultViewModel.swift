@@ -136,8 +136,30 @@ final class VaultViewModel {
         )
     }
 
+    func updateCredential(
+        id: UUID,
+        title: String,
+        serviceIdentifier: String,
+        username: String,
+        password: String
+    ) async -> Bool {
+        guard let normalizedService = VaultCredential.canonicalServiceIdentifier(serviceIdentifier),
+              !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              !password.isEmpty,
+              let index = credentials.firstIndex(where: { $0.id == id }) else {
+            mutationError = "Enter a valid website, name, and password."
+            return false
+        }
+        var replacement = credentials
+        replacement[index].title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        replacement[index].serviceIdentifier = normalizedService
+        replacement[index].username = username
+        replacement[index].password = password
+        return await persist(replacement, reason: "Update this login in your vault")
+    }
+
     func importChromeCSV(fileURL: URL) async -> ImportSummary? {
-        let parsed: ChromeImportResult
+        var parsed: ChromeImportResult?
         do {
             parsed = try await Task.detached(priority: .userInitiated) {
                 try ChromeCSVImporter.parse(fileURL: fileURL)
@@ -146,10 +168,16 @@ final class VaultViewModel {
             mutationError = "The CSV could not be read. Export it again from Chrome and retry."
             return nil
         }
+        defer { parsed = nil }
+        guard let parsed else { return nil }
         var keys = Set(credentials.map {
             "\($0.serviceIdentifier)\u{0}\($0.username)\u{0}\($0.password)"
         })
         var imported: [VaultCredential] = []
+        defer {
+            keys.removeAll(keepingCapacity: false)
+            imported.removeAll(keepingCapacity: false)
+        }
         var existingDuplicates = 0
         for candidate in parsed.accepted {
             let key = "\(candidate.serviceIdentifier)\u{0}\(candidate.username)\u{0}\(candidate.password)"
