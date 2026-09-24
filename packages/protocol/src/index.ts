@@ -8,6 +8,7 @@ export { encodeVaultObjectRecord, decodeVaultObjectRecord, MAX_OBJECT_PLAINTEXT_
 export type { VaultObjectRecord, SealedBytes } from './vault-object-record.js';
 export { encodePasswordPayload, decodePasswordPayload } from './password-payload.js';
 export type { PasswordPayload } from './password-payload.js';
+export { isCanonicalPasswordOrigin } from './password-origin.js';
 
 export type CredentialKind = 'password' | 'passkey' | 'totp' | 'recovery-code' | 'secure-note';
 

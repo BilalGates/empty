@@ -32,7 +32,8 @@ public struct SpacePasswordPayload: Equatable, Sendable {
                     guard (1...16).contains(originCount) else { throw Error.invalidPayload }
                     var origins = [String]()
                     for _ in 0..<originCount { origins.append(try reader.text(maximum: 2_048, allowEmpty: false)) }
-                    guard Set(origins).count == origins.count else { throw Error.invalidPayload }
+                    guard Set(origins).count == origins.count,
+                          origins.allSatisfy(SpacePasswordOrigin.isCanonical) else { throw Error.invalidPayload }
                     fields[key] = .origins(origins)
                 case 3: fields[key] = .text(try reader.text(maximum: 1_024, allowEmpty: true))
                 case 4: fields[key] = .text(try reader.text(maximum: 65_536, allowEmpty: false))

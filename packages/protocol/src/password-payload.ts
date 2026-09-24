@@ -1,5 +1,6 @@
 import { decodeDeterministicCbor, encodeDeterministicCbor, type CborValue } from './cbor.js';
 import { MAX_OBJECT_PLAINTEXT_BYTES } from './vault-object-record.js';
+import { isCanonicalPasswordOrigin } from './password-origin.js';
 
 /** The first typed V1 payload. Other object types remain unavailable to V1 callers. */
 export interface PasswordPayload {
@@ -39,7 +40,8 @@ function validate(value: PasswordPayload): PasswordPayload {
     throw new Error('INVALID_PAYLOAD');
   }
   const origins = value.origins.map(origin => text(origin, 2048));
-  if (new Set(origins).size !== origins.length || typeof value.favorite !== 'boolean') {
+  if (origins.some(origin => !isCanonicalPasswordOrigin(origin)) ||
+      new Set(origins).size !== origins.length || typeof value.favorite !== 'boolean') {
     throw new Error('INVALID_PAYLOAD');
   }
   const createdAtMs = timestamp(value.createdAtMs);

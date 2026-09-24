@@ -34,6 +34,16 @@ final class SpacePasswordPayloadTests: XCTestCase {
         XCTAssertThrowsError(try SpacePasswordPayload.decode(unknown))
     }
 
+    func testRejectsNoncanonicalOriginInsideAuthenticatedPayload() throws {
+        var bytes = try vectorBytes()
+        let needle = Data("https://example.com".utf8)
+        let range = try XCTUnwrap(bytes.range(of: needle))
+        bytes[range.lowerBound + 8] = 0x45
+        XCTAssertThrowsError(try SpacePasswordPayload.decode(bytes)) { error in
+            XCTAssertEqual(error as? SpacePasswordPayload.Error, .invalidPayload)
+        }
+    }
+
     private func vectorBytes() throws -> Data {
         let url = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "password-payload-v1", withExtension: "json"))
         let vector = try JSONDecoder().decode(Vector.self, from: Data(contentsOf: url))
