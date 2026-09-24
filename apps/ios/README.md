@@ -23,8 +23,12 @@ V1 wire artifact.
 `SpaceVaultObjectEnvelope` now reads the isolated `space.vault/1` object frame,
 compares the caller's expected AAD, verifies both AEAD tags, and validates
 deterministic CBOR before returning payload bytes. It is not connected to app
-storage, sync, or AutoFill. A type-specific payload schema, signed operation
-context, and migration are required before activation.
+storage, sync, or AutoFill. Signed operation context and migration are required
+before activation.
+
+The isolated `password` V1 decoder now checks an exact bounded payload schema;
+`openPassword` dispatches only when trusted authenticated context names that type.
+Origins still need semantic validation before any AutoFill use.
 
 `SpaceSyncClient` now implements authenticated `/v1/session`, fail-closed
 `/v1/bootstrap/bind`, and canonical

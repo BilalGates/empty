@@ -15,7 +15,13 @@ Branch: `feat/space-foundation`, uncommitted development increment. This is not 
 
 ## Still required
 
-- The V1 object envelope remains isolated: TypeScript writes and reads it, while Swift reads, decrypts, and validates canonical CBOR. Key slots, type-specific payload validation, Swift writing, operation signatures, DAG/checkpoint, parser fuzzing, migration, and complete cross-platform vectors remain open; Chrome/iOS persistence and sync do not use these helpers.
+- The V1 object envelope remains isolated: TypeScript writes and reads it, while Swift reads, decrypts, and validates canonical CBOR. Key slots, payload schemas beyond `password`, Swift writing, operation signatures, DAG/checkpoint, parser fuzzing, migration, and complete cross-platform vectors remain open; Chrome/iOS persistence and sync do not use these helpers.
+
+## Password payload increment
+
+- The first V1 typed payload (`password`) has exact integer-keyed CBOR fields, size/type/time bounds, and a shared vector used by TypeScript and Swift tests. Both typed open wrappers require `object_type=password` in the caller's trusted AAD before accepting the payload.
+- `npm run check` passed with 54 core/protocol tests and 11 extension tests. The iPhone 17 Pro / iOS 26.5 simulator result bundle reported 46 passed, zero failed or skipped. Secret, permission, and migration gates passed.
+- Independent security and adversarial review found no remaining Critical, High, or Medium issue in these isolated helpers. Origin semantic validation, other object schemas, Swift writer, persistence/sync integration, and physical-device AutoFill remain open.
 - A signed physical-device run is still needed for actual Keychain/App Group/AutoFill entitlements, biometric cancellation, protected-data lock, and memory-pressure behavior. Unsigned simulator builds cannot establish those properties.
 - The provider filter's shared predicate is tested, but controller wiring and direct identity requests need device-level integration tests. A prior design uses host matching for iOS service identifiers and must be reviewed against actual AutoFill semantics before release.
 - This branch has no production promotion, store signing, or final candidate security approval. The decision remains **not ready for real credentials**.

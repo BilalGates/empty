@@ -5,7 +5,9 @@ Decision: **NOT READY for production credentials**
 
 ## Verified locally
 
-The 2026-09-24 development increment added deterministic CBOR, exact `vault-object` AAD encoders, an isolated per-object envelope reader/writer in TypeScript, and a matching bounded reader in Swift. Independent libsodium/HKDF bytes verify both AEAD purposes and framing. `npm run check`, secret/permission/migration gates, the macOS Xcode Release simulator build, and simulator tests pass. XcodeGen now preserves the app and provider entitlements, and the build gate checks them. This verifies protocol components, not typed payload schemas, signed operations, production persistence/sync, or production AutoFill behavior.
+The 2026-09-24 development increment added deterministic CBOR, exact `vault-object` AAD encoders, an isolated per-object envelope reader/writer in TypeScript, and a matching bounded reader in Swift. Independent libsodium/HKDF bytes verify both AEAD purposes and framing. `npm run check`, secret/permission/migration gates, the macOS Xcode Release simulator build, and simulator tests pass. XcodeGen now preserves the app and provider entitlements, and the build gate checks them. This verifies isolated protocol components, not signed operations, production persistence/sync, or production AutoFill behavior.
+
+The first typed V1 payload (`password`) now has strict decoders on both platforms and dispatch from authenticated object type. The TypeScript gate passes 54 core/protocol tests plus 11 extension tests; the iOS simulator passes 46 tests. Origin semantics, other payload types, signed operations, persistence/sync, and production AutoFill behavior remain unverified.
 
 - Locked Node dependency graph with zero known `npm audit` vulnerabilities at high/critical threshold.
 - Lint, TypeScript checks, unit tests, workspace builds, secret scan, permission audit, and migration ordering.
