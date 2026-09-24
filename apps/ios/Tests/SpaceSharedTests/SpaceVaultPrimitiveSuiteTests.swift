@@ -86,6 +86,32 @@ final class SpaceVaultPrimitiveSuiteTests: XCTestCase {
         ) { XCTAssertEqual($0 as? SpaceVaultPrimitiveSuite.Error, .invalidEnvelope) }
     }
 
+    func testObjectEnvelopeVectorSeparatesWrapAndPayloadAuthentication() throws {
+        let vector: ObjectEnvelopeVector = try loadVector("vault-object-envelope-v1")
+        let suite = try SpaceVaultPrimitiveSuite()
+        let aad = try Data(hex: vector.aadHex)
+        let dek = try suite.open(
+            ciphertext: Data(hex: vector.wrappedCiphertextHex),
+            key: Data(hex: vector.vwkHex),
+            nonce: Data(hex: vector.wrappedNonceHex),
+            authenticatedData: aad + Data([0]) + Data("dek".utf8)
+        )
+        XCTAssertEqual(dek.hex, vector.dekHex)
+        let payload = try suite.open(
+            ciphertext: Data(hex: vector.payloadCiphertextHex),
+            key: dek,
+            nonce: Data(hex: vector.payloadNonceHex),
+            authenticatedData: aad + Data([0]) + Data("payload".utf8)
+        )
+        XCTAssertEqual(payload.hex, vector.payloadCborHex)
+        XCTAssertThrowsError(try suite.open(
+            ciphertext: Data(hex: vector.wrappedCiphertextHex),
+            key: Data(hex: vector.vwkHex),
+            nonce: Data(hex: vector.wrappedNonceHex),
+            authenticatedData: aad + Data([0]) + Data("payload".utf8)
+        ))
+    }
+
     func testHKDFVaultWrapKeyMatchesIndependentVector() throws {
         let vector: HKDFVector = try loadVector("hkdf-vwk-v1")
         let suite = try SpaceVaultPrimitiveSuite()
@@ -193,6 +219,17 @@ private struct HKDFVector: Decodable {
     let ikmHex: String
     let saltHex: String
     let outputHex: String
+}
+
+private struct ObjectEnvelopeVector: Decodable {
+    let aadHex: String
+    let vwkHex: String
+    let dekHex: String
+    let wrappedNonceHex: String
+    let payloadNonceHex: String
+    let wrappedCiphertextHex: String
+    let payloadCiphertextHex: String
+    let payloadCborHex: String
 }
 
 private extension Data {
