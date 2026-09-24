@@ -22,6 +22,12 @@ Branch: `feat/space-foundation`, uncommitted development increment. This is not 
 - The first V1 typed payload (`password`) has exact integer-keyed CBOR fields, size/type/time bounds, and a shared vector used by TypeScript and Swift tests. Both typed open wrappers require `object_type=password` in the caller's trusted AAD before accepting the payload.
 - `npm run check` passed with 54 core/protocol tests and 11 extension tests. The iPhone 17 Pro / iOS 26.5 simulator result bundle reported 46 passed, zero failed or skipped. Secret, permission, and migration gates passed.
 - Independent security and adversarial review found no remaining Critical, High, or Medium issue in these isolated helpers. Origin semantic validation, other object schemas, Swift writer, persistence/sync integration, and physical-device AutoFill remain open.
+
+## Canonical password origin increment
+
+- TypeScript and Swift reject unsafe or noncanonical V1 wire origins using the same positive/negative JSON corpus. V1 deliberately rejects Unicode IDN, `xn--` A-labels, and IPv6 until a shared reviewed rule exists; neither decoder repairs paths, ports, or host case.
+- `npm run check` passed with 56 core/protocol tests and 11 extension tests. The iPhone 17 Pro / iOS 26.5 simulator result bundle reported 48 passed, zero failed or skipped. The iOS Release build and secret/permission/migration gates passed.
+- Independent security and adversarial reviews found no Critical/High/Medium issue in the isolated validators after tightening IDN and DNS suffix handling. The current iOS provider preview compares only hosts; V1 remains disconnected until an exact requested/saved-origin check is implemented and tested at the AutoFill boundary.
 - A signed physical-device run is still needed for actual Keychain/App Group/AutoFill entitlements, biometric cancellation, protected-data lock, and memory-pressure behavior. Unsigned simulator builds cannot establish those properties.
 - The provider filter's shared predicate is tested, but controller wiring and direct identity requests need device-level integration tests. A prior design uses host matching for iOS service identifiers and must be reviewed against actual AutoFill semantics before release.
 - This branch has no production promotion, store signing, or final candidate security approval. The decision remains **not ready for real credentials**.

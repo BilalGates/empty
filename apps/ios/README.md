@@ -28,7 +28,8 @@ before activation.
 
 The isolated `password` V1 decoder now checks an exact bounded payload schema;
 `openPassword` dispatches only when trusted authenticated context names that type.
-Origins still need semantic validation before any AutoFill use.
+V1 origins now follow a strict shared wire grammar. AutoFill still needs an exact
+requested/saved-origin comparison; the current provider preview uses host matching.
 
 `SpaceSyncClient` now implements authenticated `/v1/session`, fail-closed
 `/v1/bootstrap/bind`, and canonical
