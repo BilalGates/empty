@@ -12,6 +12,20 @@ public enum SpaceVaultObjectEnvelope {
     private static let maximumCiphertextBytes = 1_024 * 1_024
     private static let maximumArtifactBytes = 16 * 1_024 * 1_024
 
+    public static func openPassword(
+        artifact: Data,
+        vrk: Data,
+        expected: SpaceVaultObjectContext
+    ) throws -> SpacePasswordPayload {
+        guard expected.objectType == .password else { throw Error.invalidEnvelope }
+        var plaintext: Data?
+        defer { wipe(&plaintext) }
+        do {
+            plaintext = try open(artifact: artifact, vrk: vrk, expected: expected)
+            return try SpacePasswordPayload.decode(plaintext!)
+        } catch { throw Error.invalidEnvelope }
+    }
+
     public static func open(
         artifact: Data,
         vrk: Data,

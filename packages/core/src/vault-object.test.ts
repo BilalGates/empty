@@ -6,7 +6,7 @@ import {
   type VaultObjectAad
 } from '@space/protocol';
 import { describe, expect, it } from 'vitest';
-import { openVaultObject, sealVaultObject } from './vault-object.js';
+import { openPasswordVaultObject, openVaultObject, sealVaultObject } from './vault-object.js';
 
 interface Vector {
   vrkHex: string; dekHex: string; aadHex: string; vwkHex: string;
@@ -92,5 +92,16 @@ describe('space.vault/1 per-object envelope', () => {
     expect(opened).toBeInstanceOf(Uint8Array);
     expect((opened as Uint8Array).length).toBe(payload.length);
     expect(() => sealVaultObject(vrk, aad, new Uint8Array(payload.length + 1))).toThrow('INVALID_ENVELOPE');
+  });
+
+  it('dispatches a typed password payload only from authenticated object type', () => {
+    const password = new Map<number, string | number | boolean | string[]>([
+      [1, 'Example'], [2, ['https://example.com']], [3, 'alice'], [4, 'demo-only'],
+      [7, false], [8, 1_700_000_000_000], [9, 1_700_000_000_001]
+    ]);
+    const sealed = sealVaultObject(vrk, aad, password);
+    expect(openPasswordVaultObject(vrk, aad, sealed).username).toBe('alice');
+    expect(() => openPasswordVaultObject(vrk, { ...aad, objectType: 'totp' }, sealed)).toThrow('INVALID_ENVELOPE');
+    expect(() => openPasswordVaultObject(vrk, aad, artifact)).toThrow('INVALID_ENVELOPE');
   });
 });

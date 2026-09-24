@@ -2,9 +2,9 @@ import { xchacha20poly1305 } from '@noble/ciphers/chacha';
 import { hkdf } from '@noble/hashes/hkdf';
 import { sha256 } from '@noble/hashes/sha2';
 import {
-  decodeDeterministicCbor, decodeVaultObjectRecord, encodeDeterministicCbor,
+  decodeDeterministicCbor, decodePasswordPayload, decodeVaultObjectRecord, encodeDeterministicCbor,
   encodeVaultObjectAad, encodeVaultObjectRecord, MAX_OBJECT_PLAINTEXT_BYTES,
-  type CborValue, type VaultObjectAad
+  type CborValue, type PasswordPayload, type VaultObjectAad
 } from '@space/protocol';
 import { wipe } from './encoding.js';
 
@@ -88,4 +88,15 @@ export function openVaultObject(vrk: Uint8Array, expected: VaultObjectAad, artif
     if (dek) wipe(dek);
     if (plaintext) wipe(plaintext);
   }
+}
+
+/** Dispatches by authenticated object type before accepting a typed password payload. */
+export function openPasswordVaultObject(vrk: Uint8Array, expected: VaultObjectAad, artifact: Uint8Array): PasswordPayload {
+  if (expected.objectType !== 'password') throw new Error('INVALID_ENVELOPE');
+  let encoded: Uint8Array | undefined;
+  try {
+    encoded = encodeDeterministicCbor(openVaultObject(vrk, expected, artifact), MAX_OBJECT_PLAINTEXT_BYTES);
+    return decodePasswordPayload(encoded);
+  } catch { throw new Error('INVALID_ENVELOPE'); }
+  finally { if (encoded) wipe(encoded); }
 }

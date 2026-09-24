@@ -104,6 +104,39 @@ final class SpaceVaultObjectEnvelopeTests: XCTestCase {
         try SpaceDeterministicCBOR.validate(Data(hex: "a201676669787475726502182a"))
     }
 
+    func testPasswordDispatchUsesAuthenticatedObjectType() throws {
+        let fixture = try loadFixture()
+        let envelope = try loadEnvelopeVector()
+        let vectorURL = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "password-payload-v1", withExtension: "json"))
+        let payloadVector = try JSONDecoder().decode(PasswordVector.self, from: Data(contentsOf: vectorURL))
+        let suite = try SpaceVaultPrimitiveSuite()
+        let ciphertext = try suite.seal(
+            plaintext: Data(hex: payloadVector.cborHex),
+            key: Data(hex: envelope.dekHex),
+            nonce: Data(hex: envelope.payloadNonceHex),
+            authenticatedData: Data(hex: envelope.aadHex) + Data([0]) + Data("payload".utf8)
+        )
+        var artifact = fixture.artifact
+        let oldCiphertextLength = try Data(hex: envelope.payloadCborHex).count + SpaceVaultPrimitiveSuite.tagSize
+        let lengthOffset = artifact.count - oldCiphertextLength - 1
+        artifact[lengthOffset] = UInt8(ciphertext.count)
+        artifact.replaceSubrange((lengthOffset + 1)..<artifact.count, with: ciphertext)
+        let bodyLength = UInt32(artifact.count - 11).bigEndian
+        artifact.replaceSubrange(7..<11, with: withUnsafeBytes(of: bodyLength, Array.init))
+        XCTAssertEqual(try SpaceVaultObjectEnvelope.openPassword(
+            artifact: artifact, vrk: fixture.vrk, expected: fixture.context
+        ).username, "alice")
+        let wrongType = SpaceVaultObjectContext(
+            vaultID: fixture.context.vaultID, objectID: fixture.context.objectID,
+            objectType: .totp, objectVersion: fixture.context.objectVersion,
+            epoch: fixture.context.epoch, keyID: fixture.context.keyID,
+            createdByDevice: fixture.context.createdByDevice
+        )
+        XCTAssertThrowsError(try SpaceVaultObjectEnvelope.openPassword(
+            artifact: artifact, vrk: fixture.vrk, expected: wrongType
+        ))
+    }
+
     private func loadFixture() throws -> Fixture {
         let bundle = Bundle(for: Self.self)
         let aadURL = try XCTUnwrap(bundle.url(forResource: "vault-object-aad-v1", withExtension: "json"))
@@ -155,6 +188,7 @@ final class SpaceVaultObjectEnvelopeTests: XCTestCase {
         let keyIdHex: String
         let createdByDeviceHex: String
     }
+    private struct PasswordVector: Decodable { let cborHex: String }
 }
 
 private extension Data {

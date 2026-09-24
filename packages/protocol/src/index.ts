@@ -6,6 +6,8 @@ export { encodeVaultObjectAad, decodeVaultObjectAad } from './vault-aad.js';
 export type { VaultObjectAad } from './vault-aad.js';
 export { encodeVaultObjectRecord, decodeVaultObjectRecord, MAX_OBJECT_PLAINTEXT_BYTES } from './vault-object-record.js';
 export type { VaultObjectRecord, SealedBytes } from './vault-object-record.js';
+export { encodePasswordPayload, decodePasswordPayload } from './password-payload.js';
+export type { PasswordPayload } from './password-payload.js';
 
 export type CredentialKind = 'password' | 'passkey' | 'totp' | 'recovery-code' | 'secure-note';
 
