@@ -61,6 +61,7 @@ WebAuthn aporta resistencia al phishing mediante el vínculo con el nombre del v
 - El content script nunca recibe índices completos, notas, TOTP seeds, DEK ni VRK.
 - Copiar, revelar, exportar plaintext, cambiar factores y añadir dispositivo requieren reautenticación/step-up reciente.
 - El cliente no acepta disminuir KDF, epoch o versión desde datos no confiables.
+- El helper de objeto V1 exige un contexto de routing confiable externo y compara todos sus campos con el AAD antes de descifrar. Aún no está conectado a almacenamiento, sync ni UI; esta pieza aislada no aporta por sí sola autenticidad de operaciones, detección de rollback ni validación semántica del payload.
 - Borrar localmente secretos incluye buffers y temporales en best effort; en runtimes con GC no se promete borrado perfecto.
 
 ## Fuera del alcance de V1
@@ -70,4 +71,3 @@ Compromiso del endpoint mientras el vault está abierto; firmware/OS/autenticado
 ## Casos de abuso que deben probarse
 
 Mutación de cada byte de header/AAD/ciphertext; nonce repetido; slot cruzado entre vaults; objeto sustituido por tombstone; KDF con memoria extrema; CBOR duplicado/no canónico/recursivo; commit firmado por dispositivo revocado o con secuencia repetida; challenge WebAuthn repetido; PRF solicitado pero omitido; respuesta de content script desde frame/origen distinto; IDN homógrafo; recuperación con snapshot antiguo; servidor que oculta una rama de conflicto.
-

@@ -20,6 +20,12 @@ until deterministic CBOR/AAD, per-object envelopes, signatures, and checkpoints 
 their complete shared vector corpus. Do not sync the local cache file or treat it as a
 V1 wire artifact.
 
+`SpaceVaultObjectEnvelope` now reads the isolated `space.vault/1` object frame,
+compares the caller's expected AAD, verifies both AEAD tags, and validates
+deterministic CBOR before returning payload bytes. It is not connected to app
+storage, sync, or AutoFill. A type-specific payload schema, signed operation
+context, and migration are required before activation.
+
 `SpaceSyncClient` now implements authenticated `/v1/session`, fail-closed
 `/v1/bootstrap/bind`, and canonical
 `/v1/vaults/{vaultId}/sync/{push,pull}` transport. Its device credential is stored by

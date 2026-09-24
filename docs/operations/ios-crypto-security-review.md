@@ -14,6 +14,8 @@ The native-code surface is limited to pinned SwiftPM revisions of the PHC Argon2
 - HKDF labels are fixed and key, vault-ID, and slot-ID sizes fail closed.
 - XChaCha requires a 32-byte key, 24-byte nonce, bounded plaintext/AAD, and maps every authentication failure to one non-secret external error.
 - The common corpus in `/test-vectors` is executed independently by Noble in TypeScript and by the Swift tests. Ciphertext/AAD mutation and malformed-size tests fail closed.
+- The 2026-09-24 increment added three deterministic `vault-object` AAD vectors that pass in TypeScript and the iOS simulator. This is only one V1 map; the complete envelope and signed-operation corpus remains open.
+- An independent object-envelope vector now proves Swift can parse the V1 object frame, compare expected AAD, decrypt the wrapped DEK and payload with distinct AAD suffixes, and validate deterministic CBOR. Swift still has no type-specific payload decoder, V1 writer, or persistence integration; signed operations and checkpoints remain open.
 - Mutable secret buffers are wiped on best effort; no logs, analytics, or persistence contain password or key material.
 - Adversarial review found redirect replay and premature runtime-integration risks. Redirects are now rejected by a retained URLSession delegate; runtime integration stays blocked.
 

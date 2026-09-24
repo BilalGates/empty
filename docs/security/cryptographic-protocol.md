@@ -49,6 +49,8 @@ Cada artefacto es `magic(4) || protocol_version(u16be) || kind(u8) || cbor_lengt
 
 Los mapas siguientes usan nombres legibles en esta especificación; el schema y los vectores fijarán keys enteras. `aad_bytes` es la codificación CBOR determinista exacta del mapa `aad`, no una reconstrucción desde objetos de lenguaje.
 
+Para el AAD de `vault-object`, el mapa usa las claves enteras exactas `1:suite`, `2:kind`, `3:vault_id`, `4:object_id`, `5:object_type`, `6:object_version`, `7:epoch`, `8:key_id`, `9:created_by_device`. Los IDs son byte strings de 16 bytes; `object_version` y `epoch` son enteros positivos de hasta `2^53-1`; `suite`, `kind` y `object_type` son text strings UTF-8. Los vectores normativos están en `test-vectors/vault-object-aad-*.json`. Las claves de los demás mapas V1 todavía no están congeladas; ningún cliente debe emitirlos como `space.vault/1` hasta definirlos y revisarlos.
+
 ### Objeto cifrado V1
 
 ```text
@@ -57,13 +59,15 @@ aad = {
   object_type, object_version, epoch, key_id, created_by_device
 }
 record = {
-  aad,
+  aad_bytes,
   wrapped_dek: { nonce: random(24), ciphertext: AEAD_Encrypt(VWK, nonce, DEK, aad_bytes || "\0dek") },
   payload:     { nonce: random(24), ciphertext: AEAD_Encrypt(DEK, nonce, payload_cbor, aad_bytes || "\0payload") }
 }
 ```
 
 `object_type` incluye `password`, `passkey`, `totp`, `secure-item` o `tombstone`. Metadata sensible (título, URL, username, grupo y timestamps semánticos) vive en `payload`; el servidor solo recibe routing/revision IDs, longitudes y ciphertext. Actualizar un objeto genera DEK y nonces nuevos. El descifrado valida ambos tags antes de parsear payload.
+
+El artefacto de objeto usa el framing anterior con `protocol_version=1` y `kind=1`. Su cuerpo CBOR es un mapa exacto de tres entradas: `1:aad_bytes` (byte string con el mapa AAD ya codificado), `2:wrapped_dek` y `3:payload`. Los dos submapas de ciphertext tienen exactamente `1:nonce` y `2:ciphertext`, ambos byte strings. V1 limita el payload CBOR de este artefacto a `1 MiB - 16 bytes`, de modo que el ciphertext con tag no supera el límite de byte string de 1 MiB. La DEK envuelta mide exactamente 48 bytes; cada nonce mide 24 bytes. Se rechaza cualquier clave adicional, versión/kind distinta, longitud discordante o byte extra. El vector `test-vectors/vault-object-envelope-v1.json` fija framing, HKDF, ambos AAD de propósito separado y ambos ciphertexts. Antes de descifrar, el cliente DEBE comparar el AAD autenticado con el contexto de routing confiable proporcionado por el llamador; los campos del artefacto nunca sustituyen ese contexto.
 
 ### Slot de contraseña
 

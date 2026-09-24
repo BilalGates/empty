@@ -1,9 +1,11 @@
 # Release readiness
 
-Last reviewed: 2026-09-06  
+Last reviewed: 2026-09-24
 Decision: **NOT READY for production credentials**
 
 ## Verified locally
+
+The 2026-09-24 development increment added deterministic CBOR, exact `vault-object` AAD encoders, an isolated per-object envelope reader/writer in TypeScript, and a matching bounded reader in Swift. Independent libsodium/HKDF bytes verify both AEAD purposes and framing. `npm run check`, secret/permission/migration gates, the macOS Xcode Release simulator build, and simulator tests pass. XcodeGen now preserves the app and provider entitlements, and the build gate checks them. This verifies protocol components, not typed payload schemas, signed operations, production persistence/sync, or production AutoFill behavior.
 
 - Locked Node dependency graph with zero known `npm audit` vulnerabilities at high/critical threshold.
 - Lint, TypeScript checks, unit tests, workspace builds, secret scan, permission audit, and migration ordering.
@@ -16,7 +18,7 @@ Decision: **NOT READY for production credentials**
 
 ## Production blockers
 
-1. The Chrome preview encrypts one canonical JSON vault. It does not yet implement the normative `space.vault/1` per-object deterministic-CBOR, HKDF-separated keys, signed operations, device sequence/DAG, or authenticated checkpoint/rollback design.
+1. The Chrome preview still encrypts one canonical JSON vault. An isolated V1 per-object CBOR/HKDF/AEAD helper exists, but Chrome does not use it; signed operations, device sequence/DAG, and authenticated checkpoint/rollback are not implemented.
 2. Shared Argon2id, HKDF, and XChaCha vectors now run in TypeScript and are staged for Swift. Deterministic CBOR/AAD, envelopes, recovery encoding, PRF, device transfer, signatures, checkpoints, parser mutation, and resource-bound vectors are still required on every platform.
 3. iOS still needs a real signed host-app bootstrap for the canonical vault identity/key, physical-device AutoFill and protected-data lock tests, and retained macOS archive evidence. Windows parsing is not an Apple SDK build.
 4. Independent security/adversarial review must be repeated on the exact candidate commit after blockers 1–3 close.
