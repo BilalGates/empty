@@ -28,6 +28,13 @@ public struct VaultCredential: Codable, Identifiable, Equatable, Sendable {
         }
     }
 
+    public static func matching(
+        _ credentials: [VaultCredential],
+        serviceIdentifiers: [String]
+    ) -> [VaultCredential] {
+        credentials.filter { $0.matches(serviceIdentifiers: serviceIdentifiers) }
+    }
+
     public static func canonicalServiceIdentifier(_ value: String) -> String? {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         let candidate = trimmed.contains("://") ? trimmed : "https://\(trimmed)"

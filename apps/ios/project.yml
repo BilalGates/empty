@@ -26,6 +26,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.space.shared
         APPLICATION_EXTENSION_API_ONLY: YES
         SKIP_INSTALL: YES
+        GENERATE_INFOPLIST_FILE: YES
     dependencies:
       - package: Clibsodium
         product: Clibsodium
@@ -44,6 +45,10 @@ targets:
         SpaceKeychainAccessGroup: "$(AppIdentifierPrefix)com.space.shared"
     entitlements:
       path: Configuration/Space.entitlements
+      properties:
+        com.apple.developer.authentication-services.autofill-credential-provider: true
+        com.apple.security.application-groups: [group.com.space.shared]
+        keychain-access-groups: ["$(AppIdentifierPrefix)com.space.shared"]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.space.app
@@ -66,6 +71,10 @@ targets:
           NSExtensionPrincipalClass: "$(PRODUCT_MODULE_NAME).CredentialProviderViewController"
     entitlements:
       path: Configuration/CredentialProvider.entitlements
+      properties:
+        com.apple.developer.authentication-services.autofill-credential-provider: true
+        com.apple.security.application-groups: [group.com.space.shared]
+        keychain-access-groups: ["$(AppIdentifierPrefix)com.space.shared"]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.space.app.credential-provider
@@ -90,7 +99,6 @@ targets:
     platform: iOS
     sources: [Tests/CredentialProviderTests]
     dependencies:
-      - target: SpaceCredentialProvider
       - target: SpaceShared
     settings:
       base:

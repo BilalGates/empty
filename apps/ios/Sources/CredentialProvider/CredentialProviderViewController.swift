@@ -16,7 +16,10 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
                     interaction: .allowed(reason: "Unlock credentials for AutoFill")
                 )
                 self.store = store
-                credentials = Self.matches(snapshot.credentials, services: serviceIdentifiers)
+                credentials = VaultCredential.matching(
+                    snapshot.credentials,
+                    serviceIdentifiers: serviceIdentifiers.map(\.identifier)
+                )
                 showCredentialList()
             } catch UnlockKeyStoreError.cancelled {
                 cancel(code: .userCanceled)
@@ -109,13 +112,6 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
         return UUID(uuidString: identifier)
     }
 
-    static func matches(
-        _ credentials: [VaultCredential],
-        services: [ASCredentialServiceIdentifier]
-    ) -> [VaultCredential] {
-        credentials.filter { $0.matches(serviceIdentifiers: services.map(\.identifier)) }
-    }
-
     override func didReceiveMemoryWarning() {
         credentials.removeAll(keepingCapacity: false)
         super.didReceiveMemoryWarning()
@@ -159,4 +155,3 @@ private final class CredentialListViewController: UITableViewController {
 
     deinit { credentials.removeAll(keepingCapacity: false) }
 }
-
