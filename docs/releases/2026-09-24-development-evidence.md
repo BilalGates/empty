@@ -27,7 +27,12 @@ Branch: `feat/space-foundation`, uncommitted development increment. This is not 
 
 - TypeScript and Swift reject unsafe or noncanonical V1 wire origins using the same positive/negative JSON corpus. V1 deliberately rejects Unicode IDN, `xn--` A-labels, and IPv6 until a shared reviewed rule exists; neither decoder repairs paths, ports, or host case.
 - `npm run check` passed with 56 core/protocol tests and 11 extension tests. The iPhone 17 Pro / iOS 26.5 simulator result bundle reported 48 passed, zero failed or skipped. The iOS Release build and secret/permission/migration gates passed.
-- Independent security and adversarial reviews found no Critical/High/Medium issue in the isolated validators after tightening IDN and DNS suffix handling. The current iOS provider preview compares only hosts; V1 remains disconnected until an exact requested/saved-origin check is implemented and tested at the AutoFill boundary.
+- Independent security and adversarial reviews found no Critical/High/Medium issue in the isolated validators after tightening IDN and DNS suffix handling. At that stage the iOS provider preview still compared only hosts; the subsequent AutoFill increment below tightens this boundary. V1 remains disconnected pending device verification.
+
+## iOS AutoFill origin boundary increment (2026-09-25)
+
+- The preview provider now uses full scheme/host/port equality for URL service identifiers in list filtering. Domain-only and app identifiers fail closed; an empty identifier list yields no credentials. Both direct request paths bind the selected identity's URL to the saved record ID before releasing a password.
+- The iPhone 17 Pro / iOS 26.5 simulator result bundle reported 50 passed, zero failed or skipped. Direct AuthenticationServices requests expose the selected credential identity rather than a complete requesting URL; signed physical-device testing is still needed to verify the OS association boundary before V1 objects reach AutoFill.
 - A signed physical-device run is still needed for actual Keychain/App Group/AutoFill entitlements, biometric cancellation, protected-data lock, and memory-pressure behavior. Unsigned simulator builds cannot establish those properties.
 - The provider filter's shared predicate is tested, but controller wiring and direct identity requests need device-level integration tests. A prior design uses host matching for iOS service identifiers and must be reviewed against actual AutoFill semantics before release.
 - This branch has no production promotion, store signing, or final candidate security approval. The decision remains **not ready for real credentials**.

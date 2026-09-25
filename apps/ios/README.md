@@ -28,8 +28,12 @@ before activation.
 
 The isolated `password` V1 decoder now checks an exact bounded payload schema;
 `openPassword` dispatches only when trusted authenticated context names that type.
-V1 origins now follow a strict shared wire grammar. AutoFill still needs an exact
-requested/saved-origin comparison; the current provider preview uses host matching.
+V1 origins now follow a strict shared wire grammar. The provider preview now compares
+the full origin for URL service identifiers, including scheme and port, and rejects
+domain-only/app identifiers because they lack that context. Direct identity requests
+also bind the selected identity's URL to the saved record. AuthenticationServices does
+not expose a full requesting URL in those direct requests, so physical-device AutoFill
+verification remains required before connecting V1 credentials.
 
 `SpaceSyncClient` now implements authenticated `/v1/session`, fail-closed
 `/v1/bootstrap/bind`, and canonical

@@ -62,7 +62,7 @@ WebAuthn aporta resistencia al phishing mediante el vínculo con el nombre del v
 - Copiar, revelar, exportar plaintext, cambiar factores y añadir dispositivo requieren reautenticación/step-up reciente.
 - El cliente no acepta disminuir KDF, epoch o versión desde datos no confiables.
 - El helper de objeto V1 exige un contexto de routing confiable externo y compara todos sus campos con el AAD antes de descifrar. Aún no está conectado a almacenamiento, sync ni UI; esta pieza aislada no aporta por sí sola autenticidad de operaciones, detección de rollback ni validación semántica del payload.
-- El payload `password` V1 rechaza orígenes no canónicos, Unicode/IDN y formas de host ambiguas. Su validador aislado no autoriza AutoFill: el proveedor iOS actual compara hosts y debe sustituirse por comparación exacta del origen solicitado y guardado antes de conectar objetos V1.
+- El payload `password` V1 rechaza orígenes no canónicos, Unicode/IDN y formas de host ambiguas. El proveedor iOS exige coincidencia completa de esquema, host y puerto cuando AuthenticationServices entrega un identificador URL; identificadores de dominio/app fallan cerrados. Las solicitudes directas solo contienen la identidad seleccionada, cuya URL se vincula al registro guardado, no el origen solicitante; el comportamiento de asociación del sistema necesita prueba en dispositivo antes de conectar objetos V1.
 - Borrar localmente secretos incluye buffers y temporales en best effort; en runtimes con GC no se promete borrado perfecto.
 
 ## Fuera del alcance de V1

@@ -14,7 +14,7 @@ Status: in progress; no production activation.
 
 ## Next protocol gates
 
-1. Finish schemas for the remaining object types, parser mutation/resource tests, and fuzzing. Test exact saved/requested-origin comparison at the AutoFill integration boundary.
+1. Finish schemas for the remaining object types, parser mutation/resource tests, and fuzzing. The iOS preview now checks exact origins for URL service identifiers; verify Apple's URL/domain and direct-request association behavior on a signed physical device before connecting V1 records.
 2. Fix numeric schemas and vectors for slots, operations, signatures, and checkpoints. Add parser fuzzing.
 3. Implement the Swift V1 object writer. Then integrate both platforms with persistence only through a reviewed migration and compare authenticated context to trusted routing metadata at every caller.
 4. Implement signed DAG operations and checkpoint validation before enabling remote multi-device vault sync.
