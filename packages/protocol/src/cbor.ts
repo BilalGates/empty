@@ -1,17 +1,16 @@
-/** The restricted deterministic CBOR subset used by space.vault/1 headers. */
-export type CanonicalCbor = number | string | Uint8Array | CanonicalCbor[] | Map<number, CanonicalCbor>;
+// The narrow CBOR subset used for signed Space headers and authenticated data.
+// Maps have unsigned integer keys; floats, tags and indefinite lengths are forbidden.
+export type CborValue = null | boolean | number | string | Uint8Array | CborValue[] | Map<number, CborValue>;
 
-const MAX_BYTES = 16 * 1024 * 1024;
-const MAX_STRING_BYTES = 1024 * 1024;
+const MAX_ARTIFACT = 16 * 1024 * 1024;
+const MAX_STRING = 1024 * 1024;
 const MAX_DEPTH = 16;
 const MAX_MAP_PAIRS = 64;
-const MAX_ARRAY_ITEMS = 65536;
-const MAX_NODES = 100000;
 const encoder = new TextEncoder();
 const decoder = new TextDecoder('utf-8', { fatal: true });
 
-function head(major: number, value: number): number[] {
-  if (!Number.isSafeInteger(value) || value < 0) throw new Error('Invalid CBOR integer');
+function header(major: number, value: number): number[] {
+  if (!Number.isSafeInteger(value) || value < 0) throw new Error('INVALID_CBOR');
   if (value < 24) return [(major << 5) | value];
   if (value <= 0xff) return [(major << 5) | 24, value];
   if (value <= 0xffff) return [(major << 5) | 25, value >>> 8, value & 0xff];
@@ -22,121 +21,132 @@ function head(major: number, value: number): number[] {
     (low >>> 24) & 0xff, (low >>> 16) & 0xff, (low >>> 8) & 0xff, low & 0xff];
 }
 
-export function encodeCanonicalCbor(value: CanonicalCbor): Uint8Array {
-  let output = new Uint8Array(256);
-  let offset = 0;
-  let nodes = 0;
-  function append(bytes: ArrayLike<number>): void {
-    const required = offset + bytes.length;
-    if (required > MAX_BYTES) throw new Error('CBOR size limit exceeded');
-    if (required > output.length) {
-      const grown = new Uint8Array(Math.min(MAX_BYTES, Math.max(required, output.length * 2)));
-      grown.set(output.subarray(0, offset));
-      output = grown;
-    }
-    for (let i = 0; i < bytes.length; i++) output[offset + i] = bytes[i]!;
-    offset = required;
+function compareBytes(left: Uint8Array, right: Uint8Array): number {
+  if (left.length !== right.length) return left.length - right.length;
+  for (let index = 0; index < left.length; index++) {
+    if (left[index] !== right[index]) return left[index]! - right[index]!;
   }
-  function write(item: CanonicalCbor, depth: number): void {
-    if (++nodes > MAX_NODES) throw new Error('CBOR node limit exceeded');
-    if (depth > MAX_DEPTH) throw new Error('CBOR nesting limit exceeded');
-    if (typeof item === 'number') {
-      append(item >= 0 ? head(0, item) : head(1, -1 - item));
-    } else if (typeof item === 'string') {
-      for (let i = 0; i < item.length; i++) {
-        const unit = item.charCodeAt(i);
-        if (unit >= 0xd800 && unit <= 0xdbff) {
-          const next = item.charCodeAt(++i);
-          if (!(next >= 0xdc00 && next <= 0xdfff)) throw new Error('Invalid CBOR Unicode string');
-        } else if (unit >= 0xdc00 && unit <= 0xdfff) {
-          throw new Error('Invalid CBOR Unicode string');
-        }
-      }
-      const bytes = encoder.encode(item);
-      if (bytes.length > MAX_STRING_BYTES) throw new Error('CBOR string limit exceeded');
-      append(head(3, bytes.length)); append(bytes);
-    } else if (item instanceof Uint8Array) {
-      if (item.length > MAX_STRING_BYTES) throw new Error('CBOR byte string limit exceeded');
-      append(head(2, item.length)); append(item);
-    } else if (Array.isArray(item)) {
-      if (item.length > MAX_ARRAY_ITEMS) throw new Error('CBOR array limit exceeded');
-      append(head(4, item.length));
-      for (const entry of item) write(entry, depth + 1);
-    } else if (item instanceof Map) {
-      if (item.size > MAX_MAP_PAIRS) throw new Error('CBOR map limit exceeded');
-      const entries = [...item.entries()].sort(([a], [b]) => a - b);
-      append(head(5, entries.length));
-      for (const [key, entry] of entries) {
-        if (++nodes > MAX_NODES) throw new Error('CBOR node limit exceeded');
-        append(head(0, key)); write(entry, depth + 1);
-      }
-    } else {
-      throw new Error('Unsupported CBOR value');
-    }
-  }
-  write(value, 0);
-  return output.slice(0, offset);
+  return 0;
 }
 
-export function decodeCanonicalCbor(input: Uint8Array): CanonicalCbor {
-  if (!(input instanceof Uint8Array) || input.length > MAX_BYTES) throw new Error('CBOR size limit exceeded');
+export function encodeDeterministicCbor(value: CborValue, maximumBytes = MAX_ARTIFACT): Uint8Array {
+  if (!Number.isSafeInteger(maximumBytes) || maximumBytes < 1 || maximumBytes > MAX_ARTIFACT) throw new Error('INVALID_CBOR');
+  const output: number[] = [];
+  const append = (bytes: Iterable<number>): void => {
+    for (const byte of bytes) {
+      if (output.length >= maximumBytes) throw new Error('INVALID_CBOR');
+      output.push(byte);
+    }
+  };
+  const visit = (item: CborValue, depth: number): void => {
+    if (depth > MAX_DEPTH) throw new Error('INVALID_CBOR');
+    if (item === null) { append([0xf6]); return; }
+    if (typeof item === 'boolean') { append([item ? 0xf5 : 0xf4]); return; }
+    if (typeof item === 'number') {
+      if (!Number.isSafeInteger(item)) throw new Error('INVALID_CBOR');
+      append(item >= 0 ? header(0, item) : header(1, -1 - item)); return;
+    }
+    if (typeof item === 'string') {
+      if (item.length > MAX_STRING || item.length > maximumBytes) throw new Error('INVALID_CBOR');
+      const bytes = encoder.encode(item);
+      try {
+        if (bytes.length > MAX_STRING || bytes.length > maximumBytes || decoder.decode(bytes) !== item) throw new Error('INVALID_CBOR');
+        append(header(3, bytes.length)); append(bytes); return;
+      } finally { bytes.fill(0); }
+    }
+    if (item instanceof Uint8Array) {
+      if (item.length > MAX_STRING || item.length > maximumBytes) throw new Error('INVALID_CBOR');
+      append(header(2, item.length)); append(item); return;
+    }
+    if (Array.isArray(item)) {
+      append(header(4, item.length));
+      for (const entry of item) visit(entry, depth + 1);
+      return;
+    }
+    if (item instanceof Map) {
+      if (item.size > MAX_MAP_PAIRS) throw new Error('INVALID_CBOR');
+      const entries = [...item.entries()].map(([key, entry]) => ({ key: Uint8Array.from(header(0, key)), entry }));
+      entries.sort((a, b) => compareBytes(a.key, b.key));
+      append(header(5, entries.length));
+      for (const { key, entry } of entries) { append(key); visit(entry, depth + 1); }
+      return;
+    }
+    throw new Error('INVALID_CBOR');
+  };
+  try {
+    visit(value, 0);
+    return Uint8Array.from(output);
+  } finally { output.fill(0); }
+}
+
+export function decodeDeterministicCbor(input: Uint8Array): CborValue {
+  if (input.length > MAX_ARTIFACT) throw new Error('INVALID_CBOR');
   let offset = 0;
-  let nodes = 0;
-  function take(count: number): Uint8Array {
-    if (!Number.isSafeInteger(count) || count < 0 || count > input.length - offset) throw new Error('Truncated CBOR');
-    const result = input.subarray(offset, offset + count);
-    offset += count;
+  const take = (length: number): Uint8Array => {
+    if (!Number.isSafeInteger(length) || length < 0 || length > input.length - offset) throw new Error('INVALID_CBOR');
+    const result = input.subarray(offset, offset + length);
+    offset += length;
     return result;
-  }
-  function argument(additional: number): number {
+  };
+  const lengthFor = (additional: number): number => {
     if (additional < 24) return additional;
-    const length = additional === 24 ? 1 : additional === 25 ? 2 : additional === 26 ? 4 : additional === 27 ? 8 : 0;
-    if (!length) throw new Error('Unsupported CBOR length');
-    let result = 0;
-    for (const byte of take(length)) result = result * 256 + byte;
-    if (!Number.isSafeInteger(result)) throw new Error('CBOR integer exceeds safe range');
-    const minimum = length === 1 ? 24 : length === 2 ? 256 : length === 4 ? 65536 : 0x100000000;
-    if (result < minimum) throw new Error('Non-canonical CBOR integer');
-    return result;
-  }
-  function read(depth: number): CanonicalCbor {
-    if (++nodes > MAX_NODES) throw new Error('CBOR node limit exceeded');
-    if (depth > MAX_DEPTH) throw new Error('CBOR nesting limit exceeded');
-    const first = take(1)[0]!;
-    const major = first >>> 5;
-    const count = argument(first & 31);
-    if (major === 0) return count;
+    const width = additional === 24 ? 1 : additional === 25 ? 2 : additional === 26 ? 4 : additional === 27 ? 8 : 0;
+    if (!width) throw new Error('INVALID_CBOR');
+    let value = 0;
+    for (const byte of take(width)) value = value * 256 + byte;
+    if (!Number.isSafeInteger(value) || value < (width === 1 ? 24 : 2 ** (8 * (width / 2)))) throw new Error('INVALID_CBOR');
+    return value;
+  };
+  const parse = (depth: number): CborValue => {
+    if (depth > MAX_DEPTH) throw new Error('INVALID_CBOR');
+    const initial = take(1)[0]!;
+    const major = initial >>> 5;
+    const additional = initial & 31;
+    if (major === 7) {
+      if (initial === 0xf4) return false;
+      if (initial === 0xf5) return true;
+      if (initial === 0xf6) return null;
+      throw new Error('INVALID_CBOR');
+    }
+    const length = lengthFor(additional);
+    if (major === 0) return length;
     if (major === 1) {
-      const negative = -1 - count;
-      if (!Number.isSafeInteger(negative)) throw new Error('CBOR integer exceeds safe range');
-      return negative;
+      if (length === Number.MAX_SAFE_INTEGER) throw new Error('INVALID_CBOR');
+      return -1 - length;
     }
     if (major === 2 || major === 3) {
-      if (count > MAX_STRING_BYTES) throw new Error('CBOR string limit exceeded');
-      const bytes = take(count);
+      if (length > MAX_STRING) throw new Error('INVALID_CBOR');
+      const bytes = take(length);
       return major === 2 ? bytes.slice() : decoder.decode(bytes);
     }
     if (major === 4) {
-      if (count > MAX_ARRAY_ITEMS) throw new Error('CBOR array limit exceeded');
-      const array: CanonicalCbor[] = [];
-      for (let i = 0; i < count; i++) array.push(read(depth + 1));
-      return array;
+      if (length > input.length - offset) throw new Error('INVALID_CBOR');
+      const items: CborValue[] = [];
+      for (let index = 0; index < length; index++) items.push(parse(depth + 1));
+      return items;
     }
     if (major === 5) {
-      if (count > MAX_MAP_PAIRS) throw new Error('CBOR map limit exceeded');
-      const map = new Map<number, CanonicalCbor>();
-      let previous = -1;
-      for (let i = 0; i < count; i++) {
-        const key = read(depth + 1);
-        if (typeof key !== 'number' || key < 0 || key <= previous) throw new Error('Invalid or unordered CBOR map key');
-        map.set(key, read(depth + 1));
-        previous = key;
+      if (length > MAX_MAP_PAIRS || length * 2 > input.length - offset) throw new Error('INVALID_CBOR');
+      const entries = new Map<number, CborValue>();
+      let previous: Uint8Array | undefined;
+      for (let index = 0; index < length; index++) {
+        const start = offset;
+        const key = parse(depth + 1);
+        const encodedKey = input.subarray(start, offset);
+        if (typeof key !== 'number' || key < 0 || (previous && compareBytes(previous, encodedKey) >= 0)) throw new Error('INVALID_CBOR');
+        previous = encodedKey;
+        entries.set(key, parse(depth + 1));
       }
-      return map;
+      return entries;
     }
-    throw new Error('Unsupported CBOR type');
+    throw new Error('INVALID_CBOR');
+  };
+  try {
+    const value = parse(0);
+    if (offset !== input.length) throw new Error('INVALID_CBOR');
+    return value;
+  } catch {
+    // Do not expose decoder-specific errors or malformed-input details.
+    throw new Error('INVALID_CBOR');
   }
-  const result = read(0);
-  if (offset !== input.length) throw new Error('Trailing CBOR bytes');
-  return result;
 }

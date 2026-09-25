@@ -1,6 +1,5 @@
 import AuthenticationServices
 import XCTest
-@testable import SpaceCredentialProvider
 import SpaceShared
 
 final class CredentialProviderTests: XCTestCase {
@@ -19,9 +18,8 @@ final class CredentialProviderTests: XCTestCase {
         )
         let service = ASCredentialServiceIdentifier(identifier: "example.com", type: .domain)
         XCTAssertEqual(
-            CredentialProviderViewController.matches([expected, lookalike], services: [service]),
+            VaultCredential.matching([expected, lookalike], serviceIdentifiers: [service.identifier]),
             [expected]
         )
     }
 }
-

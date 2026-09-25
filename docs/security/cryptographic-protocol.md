@@ -47,11 +47,9 @@ No se reutiliza una clave para dos propósitos. Los textos de `info` son bytes A
 
 Cada artefacto es `magic(4) || protocol_version(u16be) || kind(u8) || cbor_length(u32be) || deterministic_cbor`. `magic = 53 50 43 45` (`SPCE`). Límites V1 antes de parsear: artefacto 16 MiB; header/AAD 16 KiB; nesting 16; mapa 64 pares; string 1 MiB. Se rechazan trailing bytes, duplicate keys, valores desconocidos críticos y codificación CBOR no determinista. RFC 8949 distingue explícitamente well-formed, valid y expected input y define la codificación determinista: [RFC 8949 §§4.2, 5](https://www.rfc-editor.org/rfc/rfc8949.html).
 
-El framing V1 fija `protocol_version = 1` y los valores `kind`: `1` objeto cifrado, `2` key slot, `3` operación firmada, `4` checkpoint, `5` transferencia de dispositivo. Se rechazan valores desconocidos y un `kind` distinto del esperado por el lector. El `cbor_length` cuenta solo bytes CBOR y debe coincidir exactamente con el tamaño restante; los 11 bytes de framing cuentan dentro del límite total de 16 MiB. El artefacto CBOR de nivel superior es un mapa. El lector genérico valida framing y codificación, pero **no** valida todavía el schema semántico de cada `kind`; los consumidores no deben tratar su salida como objeto autenticado.
-
-El subconjunto V1 de CBOR admite enteros dentro del rango seguro, byte strings, UTF-8 válido, text strings, arrays definidos y mapas definidos con claves enteras no negativas en orden canónico estricto. No admite floats, tags, simple values, longitudes indefinidas ni claves duplicadas. Los arrays se limitan a 65,536 elementos y el árbol a 100,000 nodos para impedir asignaciones desproporcionadas. Los bytes de referencia y entradas inválidas compartidas están en `test-vectors/cbor-frame-v1.json`.
-
 Los mapas siguientes usan nombres legibles en esta especificación; el schema y los vectores fijarán keys enteras. `aad_bytes` es la codificación CBOR determinista exacta del mapa `aad`, no una reconstrucción desde objetos de lenguaje.
+
+Para el AAD de `vault-object`, el mapa usa las claves enteras exactas `1:suite`, `2:kind`, `3:vault_id`, `4:object_id`, `5:object_type`, `6:object_version`, `7:epoch`, `8:key_id`, `9:created_by_device`. Los IDs son byte strings de 16 bytes; `object_version` y `epoch` son enteros positivos de hasta `2^53-1`; `suite`, `kind` y `object_type` son text strings UTF-8. Los vectores normativos están en `test-vectors/vault-object-aad-*.json`. Las claves de los demás mapas V1 todavía no están congeladas; ningún cliente debe emitirlos como `space.vault/1` hasta definirlos y revisarlos.
 
 ### Objeto cifrado V1
 
@@ -61,7 +59,7 @@ aad = {
   object_type, object_version, epoch, key_id, created_by_device
 }
 record = {
-  aad,
+  aad_bytes,
   wrapped_dek: { nonce: random(24), ciphertext: AEAD_Encrypt(VWK, nonce, DEK, aad_bytes || "\0dek") },
   payload:     { nonce: random(24), ciphertext: AEAD_Encrypt(DEK, nonce, payload_cbor, aad_bytes || "\0payload") }
 }
@@ -69,9 +67,13 @@ record = {
 
 `object_type` incluye `password`, `passkey`, `totp`, `secure-item` o `tombstone`. Metadata sensible (título, URL, username, grupo y timestamps semánticos) vive en `payload`; el servidor solo recibe routing/revision IDs, longitudes y ciphertext. Actualizar un objeto genera DEK y nonces nuevos. El descifrado valida ambos tags antes de parsear payload.
 
-El mapa CBOR exacto de `aad` para `vault-object` V1 usa estas claves enteras: `1` suite (`"space.vault/1"`), `2` kind (`"vault-object"`), `3` vault_id (16 bytes), `4` object_id (16 bytes), `5` object_type (uno de los cinco textos anteriores), `6` object_version (entero positivo), `7` epoch (entero positivo), `8` key_id (16 bytes), `9` created_by_device (16 bytes). Debe contener exactamente esas nueve entradas; ninguna es opcional. El AAD codificado tiene un límite de 16 KiB. El vector normativo de bytes y casos de alteración están en `test-vectors/object-aad-v1.json` y `packages/protocol/src/object-aad.test.ts`. Este mapa, por sí solo, no valida un objeto cifrado.
+El artefacto de objeto usa el framing anterior con `protocol_version=1` y `kind=1`. Su cuerpo CBOR es un mapa exacto de tres entradas: `1:aad_bytes` (byte string con el mapa AAD ya codificado), `2:wrapped_dek` y `3:payload`. Los dos submapas de ciphertext tienen exactamente `1:nonce` y `2:ciphertext`, ambos byte strings. V1 limita el payload CBOR de este artefacto a `1 MiB - 16 bytes`, de modo que el ciphertext con tag no supera el límite de byte string de 1 MiB. La DEK envuelta mide exactamente 48 bytes; cada nonce mide 24 bytes. Se rechaza cualquier clave adicional, versión/kind distinta, longitud discordante o byte extra. El vector `test-vectors/vault-object-envelope-v1.json` fija framing, HKDF, ambos AAD de propósito separado y ambos ciphertexts. Antes de descifrar, el cliente DEBE comparar el AAD autenticado con el contexto de routing confiable proporcionado por el llamador; los campos del artefacto nunca sustituyen ese contexto.
 
-El record de objeto cifrado usa framing `kind=1` y un mapa CBOR exacto: `1` el mapa `aad` anterior, `2` `wrapped_dek`, `3` `payload`. Cada parte cifrada es un mapa exacto `{1: nonce, 2: ciphertext}` con nonce de 24 bytes. `wrapped_dek.ciphertext` mide exactamente 48 bytes (DEK de 32 bytes + tag de 16). `payload.ciphertext` mide entre 16 bytes (tag) y 1 MiB, conforme al límite por byte string de V1. El límite total de artefacto de 16 MiB sigue aplicando a cualquier `kind`. El vector de parseo está en `test-vectors/object-record-v1.json`; sus bytes de ciphertext son públicos y **no** constituyen un tag AEAD válido. Un record parseado continúa sin autenticar hasta verificar ambos tags usando los bytes AAD exactos y sus sufijos de dominio.
+#### Payload `password` V1
+
+Cuando `object_type=password`, el plaintext es un mapa CBOR determinista con claves enteras exactas: `1:title` (texto UTF-8, 1..256 bytes), `2:origins` (array de 1..16 textos únicos, cada uno 1..2048 bytes), `3:username` (texto, 0..1024 bytes), `4:password` (texto, 1..65536 bytes), `5:group_id` (byte string de 16 bytes, opcional), `6:notes` (texto, 0..65536 bytes, opcional), `7:favorite` (booleano), `8:created_at_ms` y `9:updated_at_ms` (enteros positivos hasta `2^53-1`, con `updated_at_ms >= created_at_ms`). Se rechazan campos desconocidos, tipos distintos, orígenes duplicados y payloads mayores de `1 MiB - 16 bytes`. El vector `test-vectors/password-payload-v1.json` fija los bytes. Los demás tipos de objeto aún no tienen esquema V1 y no deben activarse.
+
+Cada origen `password` debe estar ya en forma canónica exacta `https://host[:port]` o `http://host[:port]` solo para `localhost` y `127.0.0.1`. El host usa ASCII minúscula: `localhost`, IPv4 decimal canónico de cuatro octetos, o al menos dos etiquetas DNS de 1..63 caracteres `[a-z0-9-]` que empiezan y terminan en alfanumérico, con letra ASCII inicial en la última etiqueta; el host completo mide como máximo 253 bytes. Las etiquetas `xn--` y los IDN Unicode se rechazan en V1 hasta disponer de una regla IDNA común y revisada; IPv6 también queda fuera del payload V1. Un puerto explícito es decimal 1..65535 sin cero inicial y nunca el puerto por defecto (`443` para HTTPS, `80` para HTTP). No se aceptan rutas, slash final, credenciales, query, fragmento, punto final ni ninguna reparación de URL. `test-vectors/password-origins-v1.json` fija casos positivos y negativos en ambas plataformas. La integración AutoFill todavía debe comparar el origen solicitado por el navegador/sistema con un origen guardado de forma exacta y probar esa frontera en dispositivo; esta validación del payload no autoriza por sí sola el rellenado.
 
 ### Slot de contraseña
 
