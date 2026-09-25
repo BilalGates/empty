@@ -3,7 +3,7 @@ import XCTest
 import SpaceShared
 
 final class CredentialProviderTests: XCTestCase {
-    func testFilterUsesExactNormalizedHost() {
+    func testFilterUsesExactURLOriginAndRejectsDomainOnlyRequest() {
         let expected = VaultCredential(
             title: "Expected",
             serviceIdentifier: "https://example.com/login",
@@ -16,10 +16,15 @@ final class CredentialProviderTests: XCTestCase {
             username: "b",
             password: "two"
         )
-        let service = ASCredentialServiceIdentifier(identifier: "example.com", type: .domain)
+        let service = ASCredentialServiceIdentifier(identifier: "https://example.com/account", type: .URL)
         XCTAssertEqual(
-            VaultCredential.matching([expected, lookalike], serviceIdentifiers: [service.identifier]),
+            SpaceAutofillOriginPolicy.matching(
+                [expected, lookalike], services: [.init(identifier: service.identifier, kind: .url)]
+            ),
             [expected]
         )
+        XCTAssertEqual(SpaceAutofillOriginPolicy.matching(
+            [expected], services: [.init(identifier: "example.com", kind: .domain)]
+        ), [])
     }
 }

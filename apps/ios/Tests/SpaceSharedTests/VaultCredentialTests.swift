@@ -15,16 +15,27 @@ final class VaultCredentialTests: XCTestCase {
         XCTAssertNil(VaultCredential.canonicalServiceIdentifier("https://user:pass@example.com"))
     }
 
-    func testMatchesNormalizedExactHost() {
+    func testAutofillPolicyMatchesOnlyCompleteOrigin() {
         let credential = VaultCredential(
             title: "Example",
             serviceIdentifier: "https://Example.com/login",
             username: "person@example.com",
             password: "test-value"
         )
-        XCTAssertTrue(credential.matches(serviceIdentifiers: ["example.com"]))
-        XCTAssertFalse(credential.matches(serviceIdentifiers: ["notexample.com"]))
-        XCTAssertFalse(credential.matches(serviceIdentifiers: ["login.example.com"]))
+        let url = SpaceAutofillOriginPolicy.Service(identifier: "https://example.com/account", kind: .url)
+        XCTAssertTrue(SpaceAutofillOriginPolicy.matches(credential, service: url))
+        for identifier in ["http://example.com", "https://example.com:8443", "https://notexample.com", "https://login.example.com"] {
+            XCTAssertFalse(SpaceAutofillOriginPolicy.matches(
+                credential, service: .init(identifier: identifier, kind: .url)
+            ), identifier)
+        }
+        XCTAssertFalse(SpaceAutofillOriginPolicy.matches(
+            credential, service: .init(identifier: "example.com", kind: .domain)
+        ))
+        XCTAssertFalse(SpaceAutofillOriginPolicy.matches(
+            credential, service: .init(identifier: "com.example.app", kind: .app)
+        ))
+        XCTAssertEqual(SpaceAutofillOriginPolicy.matching([credential], services: []), [])
     }
 
     func testIdentityDescriptorNeverContainsPassword() {

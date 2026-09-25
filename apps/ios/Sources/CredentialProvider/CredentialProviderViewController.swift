@@ -16,9 +16,9 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
                     interaction: .allowed(reason: "Unlock credentials for AutoFill")
                 )
                 self.store = store
-                credentials = VaultCredential.matching(
+                credentials = SpaceAutofillOriginPolicy.matching(
                     snapshot.credentials,
-                    serviceIdentifiers: serviceIdentifiers.map(\.identifier)
+                    services: serviceIdentifiers.compactMap(Self.service)
                 )
                 showCredentialList()
             } catch UnlockKeyStoreError.cancelled {
@@ -32,7 +32,8 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
     override func provideCredentialWithoutUserInteraction(
         for credentialRequest: any ASCredentialRequest
     ) {
-        guard let recordID = Self.recordID(from: credentialRequest) else {
+        guard let recordID = Self.recordID(from: credentialRequest),
+              let service = Self.service(from: credentialRequest) else {
             cancel(code: .credentialIdentityNotFound)
             return
         }
@@ -40,7 +41,9 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
             do {
                 let store = try store ?? SpaceEnvironment.makeStore()
                 let snapshot = try await store.load(interaction: .forbidden)
-                guard let credential = snapshot.credentials.first(where: { $0.id == recordID }) else {
+                guard let credential = SpaceAutofillOriginPolicy.selectedCredential(
+                    id: recordID, in: snapshot.credentials, service: service
+                ) else {
                     cancel(code: .credentialIdentityNotFound)
                     return
                 }
@@ -56,7 +59,8 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
     override func prepareInterfaceToProvideCredential(
         for credentialRequest: any ASCredentialRequest
     ) {
-        guard let recordID = Self.recordID(from: credentialRequest) else {
+        guard let recordID = Self.recordID(from: credentialRequest),
+              let service = Self.service(from: credentialRequest) else {
             cancel(code: .credentialIdentityNotFound)
             return
         }
@@ -66,7 +70,9 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
                 let snapshot = try await store.load(
                     interaction: .allowed(reason: "Unlock the selected credential")
                 )
-                guard let credential = snapshot.credentials.first(where: { $0.id == recordID }) else {
+                guard let credential = SpaceAutofillOriginPolicy.selectedCredential(
+                    id: recordID, in: snapshot.credentials, service: service
+                ) else {
                     cancel(code: .credentialIdentityNotFound)
                     return
                 }
@@ -110,6 +116,22 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
               let identifier = request.credentialIdentity.recordIdentifier
         else { return nil }
         return UUID(uuidString: identifier)
+    }
+
+    private static func service(from request: any ASCredentialRequest) -> SpaceAutofillOriginPolicy.Service? {
+        guard let request = request as? ASPasswordCredentialRequest else { return nil }
+        return service(request.credentialIdentity.serviceIdentifier)
+    }
+
+    private static func service(_ identifier: ASCredentialServiceIdentifier) -> SpaceAutofillOriginPolicy.Service? {
+        let kind: SpaceAutofillOriginPolicy.ServiceKind
+        switch identifier.type {
+        case .URL: kind = .url
+        case .domain: kind = .domain
+        case .app: kind = .app
+        @unknown default: return nil
+        }
+        return .init(identifier: identifier.identifier, kind: kind)
     }
 
     override func didReceiveMemoryWarning() {
