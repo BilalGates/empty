@@ -9,6 +9,7 @@ Status: in progress; no production activation.
 - Three shared byte vectors fix the exact AAD for one password object, including integer-width boundaries. TypeScript and Swift encoders consume them. The TypeScript AAD schema decoder rejects unknown fields and invalid types.
 - The TypeScript object envelope now uses a versioned binary frame, a fresh per-version DEK and nonces, separate HKDF-derived wrap key, and separate wrap/payload AEAD contexts. Its reader compares the complete AAD to trusted routing metadata and verifies both tags before CBOR parsing. A libsodium/Python reference vector fixes the exact bytes.
 - The Swift object reader parses the same bounded canonical frame, compares caller-supplied AAD, verifies both tags, and validates deterministic CBOR before returning payload bytes. It remains isolated from app persistence, sync, and AutoFill.
+- The Swift password-object writer validates typed CBOR before encryption, obtains a fresh DEK and independent XChaCha nonces from libsodium, and emits the exact V1 frame. A deterministic test seam matches the independent Python/libsodium artifact byte for byte; the public writer never accepts supplied key/nonce material.
 - The first typed payload schema (`password`) now has exact integer keys, bounded fields, strict TypeScript/Swift decoders, and a shared byte vector. Both platforms also reject noncanonical origins using a shared positive/negative corpus; this decoder is not connected to AutoFill.
 - Independent security and adversarial reviews found no remaining Critical or High issue in these isolated helpers. Review found an unsafe negative-integer edge case and a payload-allocation/cleanup limit; both were corrected and retested before completion.
 
@@ -16,7 +17,7 @@ Status: in progress; no production activation.
 
 1. Finish schemas for the remaining object types, parser mutation/resource tests, and fuzzing. The iOS preview now checks exact origins for URL service identifiers; verify Apple's URL/domain and direct-request association behavior on a signed physical device before connecting V1 records.
 2. Fix numeric schemas and vectors for slots, operations, signatures, and checkpoints. Add parser fuzzing.
-3. Implement the Swift V1 object writer. Then integrate both platforms with persistence only through a reviewed migration and compare authenticated context to trusted routing metadata at every caller.
+3. Integrate both platforms with persistence only through a reviewed migration and compare authenticated context to trusted routing metadata at every caller. Implement typed writers for any additional object types only after their schemas are fixed.
 4. Implement signed DAG operations and checkpoint validation before enabling remote multi-device vault sync.
 5. Repeat independent security and adversarial review of the complete reachable flow, then perform device and release-candidate gates.
 
@@ -25,6 +26,9 @@ Status: in progress; no production activation.
 The new helpers are not used by the existing Chrome JSON preview vault or iOS AES-GCM local cache. No vault data is migrated, no unlock/recovery behavior changes, and no new artifact is accepted from storage or the network. The helper's main risks are divergent serialization, parser resource exhaustion, and context substitution when later connected to persistence or sync; bounds, AEAD and trusted-context comparison address them locally, while the integration gate above remains mandatory. Existing preview data must never be relabeled as `space.vault/1`; a later migration needs an authenticated, resumable N-1 to N plan and recovery test.
 
 The origin grammar is intentionally narrower than the preview's URL handling. A later migration must surface unsupported IDN/IPv6 origins for explicit user resolution without silently dropping credentials or broadening AutoFill matches; recovery data and key slots are unchanged by this isolated validator.
+
+The Swift writer remains an isolated helper: it does not change existing vault files, unlock or recovery slots, backups, or sync. A later migration must authenticate old and new records, preserve a recoverable encrypted backup, and never relabel preview bytes as V1.
+The caller still owns monotonic `object_version`/`epoch` enforcement and rollback checks; this codec only validates their shape and binds their bytes into AAD.
 
 ## Local evidence
 

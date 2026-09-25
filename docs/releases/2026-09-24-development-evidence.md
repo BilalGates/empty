@@ -33,6 +33,12 @@ Branch: `feat/space-foundation`, uncommitted development increment. This is not 
 
 - The preview provider now uses full scheme/host/port equality for URL service identifiers in list filtering. Domain-only and app identifiers fail closed; an empty identifier list yields no credentials. Both direct request paths bind the selected identity's URL to the saved record ID before releasing a password.
 - The iPhone 17 Pro / iOS 26.5 simulator result bundle reported 50 passed, zero failed or skipped. Direct AuthenticationServices requests expose the selected credential identity rather than a complete requesting URL; signed physical-device testing is still needed to verify the OS association boundary before V1 objects reach AutoFill.
+
+## Swift V1 password-object writer (2026-09-25)
+
+- The isolated public writer validates typed password CBOR, draws a fresh 32-byte DEK and two 24-byte nonces through libsodium, and binds exact AAD with separate wrap/payload suffixes. A test-only internal material seam reproduces the independent Python/libsodium V1 artifact byte for byte.
+- The iPhone 17 Pro / iOS 26.5 simulator result bundle reported 53 passed, zero failed or skipped, including fresh-artifact and negative-input tests. Independent security and adversarial reviews found no Critical/High/Medium issue in the isolated writer.
+- The writer is not connected to storage or sync. Persistence must impose monotonic object version/epoch, validate signed operations/checkpoints, and migrate preview vaults with recovery evidence before activation.
 - A signed physical-device run is still needed for actual Keychain/App Group/AutoFill entitlements, biometric cancellation, protected-data lock, and memory-pressure behavior. Unsigned simulator builds cannot establish those properties.
 - The provider filter's shared predicate is tested, but controller wiring and direct identity requests need device-level integration tests. A prior design uses host matching for iOS service identifiers and must be reviewed against actual AutoFill semantics before release.
 - This branch has no production promotion, store signing, or final candidate security approval. The decision remains **not ready for real credentials**.

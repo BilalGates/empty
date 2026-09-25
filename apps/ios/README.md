@@ -22,9 +22,10 @@ V1 wire artifact.
 
 `SpaceVaultObjectEnvelope` now reads the isolated `space.vault/1` object frame,
 compares the caller's expected AAD, verifies both AEAD tags, and validates
-deterministic CBOR before returning payload bytes. It is not connected to app
-storage, sync, or AutoFill. Signed operation context and migration are required
-before activation.
+deterministic CBOR before returning payload bytes. Its password writer validates
+typed CBOR and generates a fresh DEK and nonces for each object version. These
+helpers are not connected to app storage, sync, or AutoFill. Signed operation
+context and migration are required before activation.
 
 The isolated `password` V1 decoder now checks an exact bounded payload schema;
 `openPassword` dispatches only when trusted authenticated context names that type.
