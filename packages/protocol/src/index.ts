@@ -1,5 +1,13 @@
 export const VAULT_FORMAT_VERSION = 1 as const;
 export const ENVELOPE_VERSION = 1 as const;
+export { encodeCanonicalCbor, decodeCanonicalCbor } from './cbor.js';
+export type { CanonicalCbor } from './cbor.js';
+export { VAULT_ARTIFACT_KIND, encodeVaultFrame, decodeVaultFrame } from './frame.js';
+export type { VaultArtifactKind } from './frame.js';
+export { encodeObjectAad, decodeObjectAad } from './object-aad.js';
+export type { VaultObjectAad, VaultObjectType } from './object-aad.js';
+export { encodeObjectRecord, decodeObjectRecord } from './object-record.js';
+export type { SealedObjectPart, UnauthenticatedObjectRecord } from './object-record.js';
 
 export type CredentialKind = 'password' | 'passkey' | 'totp' | 'recovery-code' | 'secure-note';
 
@@ -147,4 +155,3 @@ export function assertVaultDocument(value: unknown): asserts value is VaultDocum
   if (!Number.isSafeInteger(document.revision) || (document.revision ?? -1) < 0) throw new Error('Invalid revision');
   if (!Array.isArray(document.items) || !Array.isArray(document.groups)) throw new Error('Invalid vault collections');
 }
-

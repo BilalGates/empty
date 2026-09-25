@@ -57,6 +57,7 @@ WebAuthn aporta resistencia al phishing mediante el vínculo con el nombre del v
 - Todo ciphertext de vault usa AEAD y AAD que liga versión, vault, objeto, clave, epoch y tipo.
 - Nonce único por clave. Se genera con CSPRNG; nunca con reloj, revisión o `Math.random()`.
 - El parser rechaza antes de asignar memoria estructuras no canónicas, desconocidas, duplicadas o fuera de límites.
+- El framing y el CBOR determinista son solo una frontera de parseo. Un mapa bien formado sigue sin ser confiable hasta validar el schema del `kind`, su AAD, el tag o firma, y el checkpoint aplicable.
 - Un tag/firma inválido detiene el procesamiento; no hay recuperación parcial ni mensajes-oráculo diferentes.
 - El content script nunca recibe índices completos, notas, TOTP seeds, DEK ni VRK.
 - Copiar, revelar, exportar plaintext, cambiar factores y añadir dispositivo requieren reautenticación/step-up reciente.
@@ -70,4 +71,3 @@ Compromiso del endpoint mientras el vault está abierto; firmware/OS/autenticado
 ## Casos de abuso que deben probarse
 
 Mutación de cada byte de header/AAD/ciphertext; nonce repetido; slot cruzado entre vaults; objeto sustituido por tombstone; KDF con memoria extrema; CBOR duplicado/no canónico/recursivo; commit firmado por dispositivo revocado o con secuencia repetida; challenge WebAuthn repetido; PRF solicitado pero omitido; respuesta de content script desde frame/origen distinto; IDN homógrafo; recuperación con snapshot antiguo; servidor que oculta una rama de conflicto.
-
