@@ -9,6 +9,8 @@ The 2026-09-24 development increment added deterministic CBOR, exact `vault-obje
 
 The first typed V1 payload (`password`) now has strict decoders on both platforms and dispatch from authenticated object type. A shared corpus also fixes a conservative canonical origin grammar. The Swift password-object writer now matches the independent artifact vector byte for byte and uses fresh key/nonce material in its public path. The TypeScript gate passes 56 core/protocol tests plus 11 extension tests; the iOS simulator passes 53 tests. The iOS preview provider compares full origins for URL service identifiers and binds direct selected identities to saved records, while domain/app identifiers fail closed. Physical-device AutoFill behavior, other payload types, signed operations, and production persistence/sync remain unverified.
 
+The numeric signed-operation header schema is now fixed and has a shared TypeScript/Swift byte vector, including SHA-256 of the exact framed object artifact. This is parser evidence only; signatures, device authorization, DAG application, checkpoints, and migration are not implemented in the reachable flow.
+
 - Locked Node dependency graph with zero known `npm audit` vulnerabilities at high/critical threshold.
 - Lint, TypeScript checks, unit tests, workspace builds, secret scan, permission audit, and migration ordering.
 - PostgreSQL 17 migration on an empty database and idempotent rerun.

@@ -39,6 +39,11 @@ Branch: `feat/space-foundation`, uncommitted development increment. This is not 
 - The isolated public writer validates typed password CBOR, draws a fresh 32-byte DEK and two 24-byte nonces through libsodium, and binds exact AAD with separate wrap/payload suffixes. A test-only internal material seam reproduces the independent Python/libsodium V1 artifact byte for byte.
 - The iPhone 17 Pro / iOS 26.5 simulator result bundle reported 53 passed, zero failed or skipped, including fresh-artifact and negative-input tests. Independent security and adversarial reviews found no Critical/High/Medium issue in the isolated writer.
 - The writer is not connected to storage or sync. Persistence must impose monotonic object version/epoch, validate signed operations/checkpoints, and migrate preview vaults with recovery evidence before activation.
+
+## V1 signed-operation header (2026-09-25)
+
+- TypeScript and Swift encode/decode the same eleven-key deterministic CBOR header, with bounded positive counters, sorted unique 16-byte parent op IDs, and an SHA-256 field whose vector matches the complete framed object artifact. Genesis with no parents and malformed fields are tested.
+- The iPhone 17 Pro / iOS 26.5 simulator result bundle reported 56 passed, zero failed or skipped. Independent security review found and corrected a Swift empty-parent range trap before this result; subsequent security/adversarial review found no remaining parser bypass. Signature verification, DAG application, checkpoint and production sync remain open.
 - A signed physical-device run is still needed for actual Keychain/App Group/AutoFill entitlements, biometric cancellation, protected-data lock, and memory-pressure behavior. Unsigned simulator builds cannot establish those properties.
 - The provider filter's shared predicate is tested, but controller wiring and direct identity requests need device-level integration tests. A prior design uses host matching for iOS service identifiers and must be reviewed against actual AutoFill semantics before release.
 - This branch has no production promotion, store signing, or final candidate security approval. The decision remains **not ready for real credentials**.

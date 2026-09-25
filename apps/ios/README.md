@@ -27,6 +27,10 @@ typed CBOR and generates a fresh DEK and nonces for each object version. These
 helpers are not connected to app storage, sync, or AutoFill. Signed operation
 context and migration are required before activation.
 
+`SpaceOperationHeader` encodes and decodes the isolated V1 bytes that a device will
+sign. It fixes bounded fields and sorted parent operation IDs. It does not verify a
+signature, authorize a device, or apply a remote operation.
+
 The isolated `password` V1 decoder now checks an exact bounded payload schema;
 `openPassword` dispatches only when trusted authenticated context names that type.
 V1 origins now follow a strict shared wire grammar. The provider preview now compares

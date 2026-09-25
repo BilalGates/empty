@@ -11,12 +11,13 @@ Status: in progress; no production activation.
 - The Swift object reader parses the same bounded canonical frame, compares caller-supplied AAD, verifies both tags, and validates deterministic CBOR before returning payload bytes. It remains isolated from app persistence, sync, and AutoFill.
 - The Swift password-object writer validates typed CBOR before encryption, obtains a fresh DEK and independent XChaCha nonces from libsodium, and emits the exact V1 frame. A deterministic test seam matches the independent Python/libsodium artifact byte for byte; the public writer never accepts supplied key/nonce material.
 - The first typed payload schema (`password`) now has exact integer keys, bounded fields, strict TypeScript/Swift decoders, and a shared byte vector. Both platforms also reject noncanonical origins using a shared positive/negative corpus; this decoder is not connected to AutoFill.
+- The signed-operation header now has fixed integer keys, bounded identifiers/counters, sorted unique parent op IDs, and a shared TypeScript/Swift byte vector. The vector hashes the complete framed object artifact. Signature verification, DAG application, and checkpoints remain separate gates.
 - Independent security and adversarial reviews found no remaining Critical or High issue in these isolated helpers. Review found an unsafe negative-integer edge case and a payload-allocation/cleanup limit; both were corrected and retested before completion.
 
 ## Next protocol gates
 
 1. Finish schemas for the remaining object types, parser mutation/resource tests, and fuzzing. The iOS preview now checks exact origins for URL service identifiers; verify Apple's URL/domain and direct-request association behavior on a signed physical device before connecting V1 records.
-2. Fix numeric schemas and vectors for slots, operations, signatures, and checkpoints. Add parser fuzzing.
+2. Fix numeric schemas and vectors for slots, signed-operation wrappers, and checkpoints. Add signature verification, object binding, and parser fuzzing.
 3. Integrate both platforms with persistence only through a reviewed migration and compare authenticated context to trusted routing metadata at every caller. Implement typed writers for any additional object types only after their schemas are fixed.
 4. Implement signed DAG operations and checkpoint validation before enabling remote multi-device vault sync.
 5. Repeat independent security and adversarial review of the complete reachable flow, then perform device and release-candidate gates.
@@ -29,6 +30,8 @@ The origin grammar is intentionally narrower than the preview's URL handling. A 
 
 The Swift writer remains an isolated helper: it does not change existing vault files, unlock or recovery slots, backups, or sync. A later migration must authenticate old and new records, preserve a recoverable encrypted backup, and never relabel preview bytes as V1.
 The caller still owns monotonic `object_version`/`epoch` enforcement and rollback checks; this codec only validates their shape and binds their bytes into AAD.
+
+The operation-header codecs are isolated too: they do not write sync state, verify signatures, authorize devices, or advance checkpoints. They add no migration or recovery behavior. Connecting them later requires exact artifact-hash/AAD binding, monotonic device sequence, DAG ancestry, revocation checks, and a durable rollback checkpoint.
 
 ## Local evidence
 
