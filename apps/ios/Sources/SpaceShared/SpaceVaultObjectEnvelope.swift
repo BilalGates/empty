@@ -1,6 +1,6 @@
 import Foundation
 
-/// Isolated V1 envelope reader. The caller must supply authenticated routing context.
+/// Isolated V1 envelope reader/writer. The caller must supply authenticated routing context.
 /// Returned bytes are authenticated deterministic CBOR; a type-specific decoder must validate them
 /// before any credential is used. This reader is not wired into local cache or sync.
 public enum SpaceVaultObjectEnvelope {
@@ -11,6 +11,96 @@ public enum SpaceVaultObjectEnvelope {
     public static let maximumPlaintextBytes = 1_024 * 1_024 - 16
     private static let maximumCiphertextBytes = 1_024 * 1_024
     private static let maximumArtifactBytes = 16 * 1_024 * 1_024
+
+    /// Produces an isolated password object with a fresh DEK and two fresh nonces.
+    /// The caller supplies deterministic, type-validated password CBOR bytes.
+    public static func sealPassword(
+        plaintextCBOR: Data,
+        vrk: Data,
+        context: SpaceVaultObjectContext
+    ) throws -> Data {
+        guard context.objectType == .password else { throw Error.invalidEnvelope }
+        do {
+            _ = try SpacePasswordPayload.decode(plaintextCBOR)
+            let suite = try SpaceVaultPrimitiveSuite()
+            var dek: Data? = try suite.randomKey()
+            defer { wipe(&dek) }
+            return try sealUsingMaterial(
+                plaintextCBOR: plaintextCBOR, vrk: vrk, context: context,
+                dek: dek!, wrappedNonce: suite.randomNonce(), payloadNonce: suite.randomNonce()
+            )
+        } catch { throw Error.invalidEnvelope }
+    }
+
+    /// Internal deterministic seam for the shared independent vector; app targets cannot call it.
+    static func sealUsingMaterial(
+        plaintextCBOR: Data,
+        vrk: Data,
+        context: SpaceVaultObjectContext,
+        dek: Data,
+        wrappedNonce: Data,
+        payloadNonce: Data
+    ) throws -> Data {
+        var vaultWrapKey: Data?
+        defer { wipe(&vaultWrapKey) }
+        do {
+            guard plaintextCBOR.count <= maximumPlaintextBytes,
+                  dek.count == SpaceVaultPrimitiveSuite.keySize,
+                  wrappedNonce.count == SpaceVaultPrimitiveSuite.nonceSize,
+                  payloadNonce.count == SpaceVaultPrimitiveSuite.nonceSize else { throw Error.invalidEnvelope }
+            try SpaceDeterministicCBOR.validate(plaintextCBOR, maximumBytes: maximumPlaintextBytes)
+            let aad = try context.encodedAAD()
+            guard aad.count <= 16 * 1_024 else { throw Error.invalidEnvelope }
+            let suite = try SpaceVaultPrimitiveSuite()
+            vaultWrapKey = try suite.deriveVaultWrapKey(vrk: vrk, vaultID: context.vaultID)
+            let wrapped = try suite.seal(
+                plaintext: dek, key: vaultWrapKey!, nonce: wrappedNonce,
+                authenticatedData: aad + Data([0]) + Data("dek".utf8)
+            )
+            let ciphertext = try suite.seal(
+                plaintext: plaintextCBOR, key: dek, nonce: payloadNonce,
+                authenticatedData: aad + Data([0]) + Data("payload".utf8)
+            )
+            guard wrapped.count == 48, ciphertext.count <= maximumCiphertextBytes else {
+                throw Error.invalidEnvelope
+            }
+            var body = Data([0xa3, 0x01])
+            try appendByteString(aad, to: &body)
+            body.append(contentsOf: [0x02, 0xa2, 0x01])
+            try appendByteString(wrappedNonce, to: &body)
+            body.append(0x02)
+            try appendByteString(wrapped, to: &body)
+            body.append(contentsOf: [0x03, 0xa2, 0x01])
+            try appendByteString(payloadNonce, to: &body)
+            body.append(0x02)
+            try appendByteString(ciphertext, to: &body)
+            guard body.count <= maximumArtifactBytes - 11, body.count <= Int(UInt32.max) else {
+                throw Error.invalidEnvelope
+            }
+            var artifact = Data([0x53, 0x50, 0x43, 0x45, 0x00, 0x01, 0x01])
+            let length = UInt32(body.count).bigEndian
+            artifact.append(contentsOf: withUnsafeBytes(of: length, Array.init))
+            artifact.append(body)
+            return artifact
+        } catch { throw Error.invalidEnvelope }
+    }
+
+    private static func appendByteString(_ value: Data, to output: inout Data) throws {
+        let count = value.count
+        guard count <= 1_024 * 1_024 else { throw Error.invalidEnvelope }
+        if count < 24 {
+            output.append(0x40 | UInt8(count))
+        } else if count <= Int(UInt8.max) {
+            output.append(contentsOf: [0x58, UInt8(count)])
+        } else if count <= Int(UInt16.max) {
+            output.append(0x59)
+            output.append(contentsOf: withUnsafeBytes(of: UInt16(count).bigEndian, Array.init))
+        } else {
+            output.append(0x5a)
+            output.append(contentsOf: withUnsafeBytes(of: UInt32(count).bigEndian, Array.init))
+        }
+        output.append(value)
+    }
 
     public static func openPassword(
         artifact: Data,

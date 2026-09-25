@@ -104,6 +104,14 @@ public struct SpaceVaultPrimitiveSuite: Sendable {
         return Data(nonce)
     }
 
+    public func randomKey() throws -> Data {
+        guard Self.sodiumReady else { throw Error.primitiveUnavailable }
+        var key = [UInt8](repeating: 0, count: Self.keySize)
+        defer { Self.wipe(&key) }
+        randombytes_buf(&key, key.count)
+        return Data(key)
+    }
+
     public func seal(
         plaintext: Data,
         key: Data,

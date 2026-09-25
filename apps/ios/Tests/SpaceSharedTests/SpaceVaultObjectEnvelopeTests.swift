@@ -3,6 +3,77 @@ import XCTest
 @testable import SpaceShared
 
 final class SpaceVaultObjectEnvelopeTests: XCTestCase {
+    func testWriterMatchesIndependentArtifactVector() throws {
+        let fixture = try loadFixture()
+        let envelope = try loadEnvelopeVector()
+        let artifact = try SpaceVaultObjectEnvelope.sealUsingMaterial(
+            plaintextCBOR: Data(hex: envelope.payloadCborHex), vrk: fixture.vrk,
+            context: fixture.context, dek: Data(hex: envelope.dekHex),
+            wrappedNonce: Data(hex: envelope.wrappedNonceHex),
+            payloadNonce: Data(hex: envelope.payloadNonceHex)
+        )
+        XCTAssertEqual(artifact.hex, envelope.artifactHex)
+    }
+
+    func testWriterCreatesFreshTypedPasswordObjects() throws {
+        let fixture = try loadFixture()
+        let url = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "password-payload-v1", withExtension: "json"))
+        let payload = try JSONDecoder().decode(PasswordVector.self, from: Data(contentsOf: url))
+        let plaintext = try Data(hex: payload.cborHex)
+        let first = try SpaceVaultObjectEnvelope.sealPassword(
+            plaintextCBOR: plaintext, vrk: fixture.vrk, context: fixture.context
+        )
+        let second = try SpaceVaultObjectEnvelope.sealPassword(
+            plaintextCBOR: plaintext, vrk: fixture.vrk, context: fixture.context
+        )
+        XCTAssertNotEqual(first, second)
+        XCTAssertEqual(try SpaceVaultObjectEnvelope.openPassword(
+            artifact: first, vrk: fixture.vrk, expected: fixture.context
+        ).username, "alice")
+        XCTAssertEqual(try SpaceVaultObjectEnvelope.openPassword(
+            artifact: second, vrk: fixture.vrk, expected: fixture.context
+        ).password, "demo-only")
+        XCTAssertNil(first.range(of: Data("demo-only".utf8)))
+    }
+
+    func testWriterRejectsInvalidInputsBeforeEmittingArtifact() throws {
+        let fixture = try loadFixture()
+        let envelope = try loadEnvelopeVector()
+        let dek = try Data(hex: envelope.dekHex)
+        let wrappedNonce = try Data(hex: envelope.wrappedNonceHex)
+        let payloadNonce = try Data(hex: envelope.payloadNonceHex)
+        XCTAssertThrowsError(try SpaceVaultObjectEnvelope.sealPassword(
+            plaintextCBOR: Data([0xf6]), vrk: fixture.vrk, context: fixture.context
+        ))
+        XCTAssertThrowsError(try SpaceVaultObjectEnvelope.sealUsingMaterial(
+            plaintextCBOR: Data([0xf6, 0xf6]), vrk: fixture.vrk, context: fixture.context,
+            dek: dek, wrappedNonce: wrappedNonce, payloadNonce: payloadNonce
+        ))
+        XCTAssertThrowsError(try SpaceVaultObjectEnvelope.sealUsingMaterial(
+            plaintextCBOR: Data([0xf6]), vrk: Data([0]), context: fixture.context,
+            dek: dek, wrappedNonce: wrappedNonce, payloadNonce: payloadNonce
+        ))
+        XCTAssertThrowsError(try SpaceVaultObjectEnvelope.sealUsingMaterial(
+            plaintextCBOR: Data([0xf6]), vrk: fixture.vrk, context: fixture.context,
+            dek: dek, wrappedNonce: Data([0]), payloadNonce: payloadNonce
+        ))
+        let invalidContext = SpaceVaultObjectContext(
+            vaultID: Data([0]), objectID: fixture.context.objectID,
+            objectType: .password, objectVersion: fixture.context.objectVersion,
+            epoch: fixture.context.epoch, keyID: fixture.context.keyID,
+            createdByDevice: fixture.context.createdByDevice
+        )
+        XCTAssertThrowsError(try SpaceVaultObjectEnvelope.sealUsingMaterial(
+            plaintextCBOR: Data([0xf6]), vrk: fixture.vrk, context: invalidContext,
+            dek: dek, wrappedNonce: wrappedNonce, payloadNonce: payloadNonce
+        ))
+        XCTAssertThrowsError(try SpaceVaultObjectEnvelope.sealUsingMaterial(
+            plaintextCBOR: Data(repeating: 0, count: SpaceVaultObjectEnvelope.maximumPlaintextBytes + 1),
+            vrk: fixture.vrk, context: fixture.context,
+            dek: dek, wrappedNonce: wrappedNonce, payloadNonce: payloadNonce
+        ))
+    }
+
     func testOpensIndependentArtifactVector() throws {
         let fixture = try loadFixture()
         let plaintext = try SpaceVaultObjectEnvelope.open(
@@ -177,6 +248,7 @@ final class SpaceVaultObjectEnvelopeTests: XCTestCase {
         let payloadCborHex: String
         let aadHex: String
         let dekHex: String
+        let wrappedNonceHex: String
         let payloadNonceHex: String
     }
     private struct AadVector: Decodable {
