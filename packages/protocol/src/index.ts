@@ -15,6 +15,8 @@ export { encodeSignedOperationRecord, decodeSignedOperationRecord } from './sign
 export type { SignedOperationRecord } from './signed-operation.js';
 export { encodeCheckpoint, decodeCheckpoint, encodeSealedCheckpointRecord, decodeSealedCheckpointRecord, compareBytes } from './checkpoint.js';
 export type { Checkpoint, DeviceSequence, SealedCheckpointRecord } from './checkpoint.js';
+export { encodeKeySlotAad, decodeKeySlotAad, encodeKeySlotRecord, decodeKeySlotRecord, KEY_SLOT_ARGON2ID } from './key-slot.js';
+export type { KeySlotAad, KeySlotRecord, KeySlotType } from './key-slot.js';
 
 export type CredentialKind = 'password' | 'passkey' | 'totp' | 'recovery-code' | 'secure-note';
 

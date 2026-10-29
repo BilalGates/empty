@@ -97,6 +97,19 @@ public struct SpaceVaultPrimitiveSuite: Sendable {
         )
     }
 
+    public func deriveRecoveryKEK(
+        recoverySecret: Data,
+        vaultID: Data,
+        slotID: Data
+    ) throws -> Data {
+        guard slotID.count == 16 else { throw Error.invalidParameters }
+        return try hkdf(
+            inputKeyMaterial: recoverySecret,
+            salt: vaultID,
+            info: Data("space/recovery-kek/v1".utf8) + slotID
+        )
+    }
+
     public func randomNonce() throws -> Data {
         guard Self.sodiumReady else { throw Error.primitiveUnavailable }
         var nonce = [UInt8](repeating: 0, count: Self.nonceSize)

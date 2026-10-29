@@ -63,3 +63,10 @@ Branch: `feat/space-foundation`, uncommitted development increment. This is not 
 - `test-vectors/checkpoint-v1.json` comes from Python stdlib HKDF/HMAC with hand-written CBOR; TypeScript and Swift reproduce key, body and artifact byte for byte.
 - Independent security/adversarial review: no Critical/High. Medium (Swift crash on duplicate device IDs in an unvalidated checkpoint) and Low (TS merge walk on unvalidated input) fixed by validating both checkpoints and failing closed; regression tests added. Key-wiping limits and whole-state rollback limits are documented in the specification.
 - `npm run check`, `npm run security:secrets` (ripgrep restored), permission gate, iOS simulator tests and the Release simulator build gate passed.
+
+## V1 password and recovery key slots (2026-10-30)
+
+- Specification fixes the `kind=4` slot frame, integer-keyed AAD, exact V1 Argon2id parameters, and the recovery-key text format (ASCII-only input, 13×4 Base32 groups plus checksum).
+- `test-vectors/key-slot-v1.json` was produced with Python stdlib HKDF/SHA-256/Base32, hand-written CBOR and a pure-Python XChaCha20-Poly1305 that first reproduced the existing libsodium `xchacha20-poly1305-v1` and `vault-object-envelope-v1` vectors. The Argon2id output is reused from `argon2id-v1.json`, not recomputed independently. Both platforms open the vector password slot with real Argon2id.
+- Independent security/adversarial review: no Critical/High. Medium (recovery-key parsing differed between TS and Swift for Unicode whitespace and non-ASCII case folding) fixed by an ASCII-only allow-list on both platforms, with shared negative cases. Low items addressed: Swift wipes the decoded secret; shared malformed-artifact negatives (trailing byte, wrong kind, truncation) run on both platforms.
+- `npm run check`, secret scan, permission gate, iOS simulator tests (68) and the Release simulator build gate passed.

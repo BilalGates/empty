@@ -6,3 +6,4 @@ export * from './origin.js';
 export * from './vault-object.js';
 export * from './signed-operation.js';
 export * from './checkpoint.js';
+export * from './key-slot.js';
