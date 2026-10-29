@@ -56,3 +56,10 @@ Branch: `feat/space-foundation`, uncommitted development increment. This is not 
 - Independent security/adversarial review: no Critical/High. Two Medium cross-platform acceptance differences (small-order R and mixed-order public key accepted by noble's cofactored check but rejected by libsodium) were fixed by requiring prime-order R and key in TypeScript; shared negative vectors now run on both platforms (TS 6 tests, iOS 59 tests passing). Low: header CBOR is parsed before signature verification within 16/32 KiB bounds; fuzzing remains a plan item.
 - `npm run security:secrets` could not start on the review Mac because `rg` is not installed; the same two patterns were run with perl over the identical file list with no findings. Install ripgrep to restore the scripted gate.
 - New TypeScript dependency: `@noble/curves` 1.9.7 (exact pin, same audited noble family as `@noble/hashes`); `npm audit` reports 0 vulnerabilities.
+
+## V1 sealed local checkpoint (2026-10-29)
+
+- Specification fixes the six-key checkpoint map (per-device max sequence) and the `kind=3` sealed frame with HMAC-SHA-256 under the HKDF Checkpoint MAC Key.
+- `test-vectors/checkpoint-v1.json` comes from Python stdlib HKDF/HMAC with hand-written CBOR; TypeScript and Swift reproduce key, body and artifact byte for byte.
+- Independent security/adversarial review: no Critical/High. Medium (Swift crash on duplicate device IDs in an unvalidated checkpoint) and Low (TS merge walk on unvalidated input) fixed by validating both checkpoints and failing closed; regression tests added. Key-wiping limits and whole-state rollback limits are documented in the specification.
+- `npm run check`, `npm run security:secrets` (ripgrep restored), permission gate, iOS simulator tests and the Release simulator build gate passed.

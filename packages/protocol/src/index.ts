@@ -13,6 +13,8 @@ export { encodeOperationHeader, decodeOperationHeader } from './operation-header
 export type { OperationHeader } from './operation-header.js';
 export { encodeSignedOperationRecord, decodeSignedOperationRecord } from './signed-operation.js';
 export type { SignedOperationRecord } from './signed-operation.js';
+export { encodeCheckpoint, decodeCheckpoint, encodeSealedCheckpointRecord, decodeSealedCheckpointRecord, compareBytes } from './checkpoint.js';
+export type { Checkpoint, DeviceSequence, SealedCheckpointRecord } from './checkpoint.js';
 
 export type CredentialKind = 'password' | 'passkey' | 'totp' | 'recovery-code' | 'secure-note';
 
