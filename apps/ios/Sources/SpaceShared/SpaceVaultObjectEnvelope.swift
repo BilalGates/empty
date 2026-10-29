@@ -175,18 +175,18 @@ public enum SpaceVaultObjectEnvelope {
         return difference == 0
     }
 
-    private struct SealedBytes {
+    struct SealedBytes {
         let nonce: Data
         let ciphertext: Data
     }
 
-    private struct Record {
+    struct Record {
         let aad: Data
         let wrappedDek: SealedBytes
         let payload: SealedBytes
     }
 
-    private static func parse(_ artifact: Data) throws -> Record {
+    static func parse(_ artifact: Data) throws -> Record {
         guard artifact.count >= 12, artifact.count <= maximumArtifactBytes else { throw Error.invalidEnvelope }
         var reader = Reader(data: artifact)
         try reader.expect(0x53); try reader.expect(0x50); try reader.expect(0x43); try reader.expect(0x45)

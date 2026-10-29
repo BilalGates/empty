@@ -11,6 +11,8 @@ export type { PasswordPayload } from './password-payload.js';
 export { isCanonicalPasswordOrigin } from './password-origin.js';
 export { encodeOperationHeader, decodeOperationHeader } from './operation-header.js';
 export type { OperationHeader } from './operation-header.js';
+export { encodeSignedOperationRecord, decodeSignedOperationRecord } from './signed-operation.js';
+export type { SignedOperationRecord } from './signed-operation.js';
 
 export type CredentialKind = 'password' | 'passkey' | 'totp' | 'recovery-code' | 'secure-note';
 

@@ -47,3 +47,12 @@ Branch: `feat/space-foundation`, uncommitted development increment. This is not 
 - A signed physical-device run is still needed for actual Keychain/App Group/AutoFill entitlements, biometric cancellation, protected-data lock, and memory-pressure behavior. Unsigned simulator builds cannot establish those properties.
 - The provider filter's shared predicate is tested, but controller wiring and direct identity requests need device-level integration tests. A prior design uses host matching for iOS service identifiers and must be reviewed against actual AutoFill semantics before release.
 - This branch has no production promotion, store signing, or final candidate security approval. The decision remains **not ready for real credentials**.
+
+## V1 signed-operation wrapper (2026-10-29)
+
+- Specification fixes the `kind=2` frame `{1: header_cbor, 2: signature}` and strict Ed25519 verification rules.
+- `test-vectors/signed-operation-v1.json` was produced by Node.js/OpenSSL Ed25519 with the RFC 8032 test-1 key; `@noble/curves` signing reproduces it byte for byte and both platforms verify it.
+- `npm run check` passed (core suite: 5 new tests including every single-byte mutation and an S+L malleated signature). iOS simulator: 58 tests passed, including 3 new libsodium verifier tests; Release simulator build gate passed. Permission gate passed.
+- Independent security/adversarial review: no Critical/High. Two Medium cross-platform acceptance differences (small-order R and mixed-order public key accepted by noble's cofactored check but rejected by libsodium) were fixed by requiring prime-order R and key in TypeScript; shared negative vectors now run on both platforms (TS 6 tests, iOS 59 tests passing). Low: header CBOR is parsed before signature verification within 16/32 KiB bounds; fuzzing remains a plan item.
+- `npm run security:secrets` could not start on the review Mac because `rg` is not installed; the same two patterns were run with perl over the identical file list with no findings. Install ripgrep to restore the scripted gate.
+- New TypeScript dependency: `@noble/curves` 1.9.7 (exact pin, same audited noble family as `@noble/hashes`); `npm audit` reports 0 vulnerabilities.

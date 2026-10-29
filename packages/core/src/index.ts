@@ -4,3 +4,4 @@ export * from './generator.js';
 export * from './import.js';
 export * from './origin.js';
 export * from './vault-object.js';
+export * from './signed-operation.js';
