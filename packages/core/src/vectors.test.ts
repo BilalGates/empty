@@ -26,9 +26,9 @@ const xchachaVector = JSON.parse(
 
 const bytes = (hex: string): Uint8Array => Uint8Array.from(Buffer.from(hex, 'hex'));
 
-describe('space.vault/1 cross-platform vectors', { timeout: 20_000 }, () => {
+describe('empty.vault/1 cross-platform vectors', { timeout: 20_000 }, () => {
   it('matches the normative Argon2id password-slot vector', () => {
-    expect(argonVector.suite).toBe('space.vault/1');
+    expect(argonVector.suite).toBe('empty.vault/1');
     expect(argonVector.purpose).toBe('password-slot-argon2id');
     const output = argon2id(bytes(argonVector.inputUtf8Hex), bytes(argonVector.saltHex), {
       m: argonVector.parameters.memoryKiB,

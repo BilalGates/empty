@@ -10,7 +10,7 @@ import { createLogger } from "../dist/logger.js";
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error("DATABASE_URL is required");
 const pepper = process.env.DEVICE_TOKEN_PEPPER ?? "integration-only-device-token-pepper";
-const tokenA = `space_dt_${"a".repeat(43)}`;
+const tokenA = `empty_dt_${"a".repeat(43)}`;
 const ids = { user: randomUUID(), vault: randomUUID(), deviceA: randomUUID(), item: randomUUID() };
 const pool = new Pool({ connectionString: databaseUrl, ssl: false });
 let server;
@@ -44,7 +44,7 @@ try {
   expectStatus(bootstrapA, 200, "bootstrap A");
   deepStrictEqual(await bootstrapA.json(), { protocolVersion: 1, accountId: ids.user, vaultId: ids.vault, vaultEpoch: 1, deviceId: ids.deviceA, serverRevision: 0 });
 
-  const deviceB = { deviceId: randomUUID(), token: `space_dt_${"b".repeat(43)}` };
+  const deviceB = { deviceId: randomUUID(), token: `empty_dt_${"b".repeat(43)}` };
   const hashB = hashDeviceToken(deviceB.token, pepper);
   await pool.query("INSERT INTO devices(id,user_id,vault_id,label,token_fingerprint,token_hash) VALUES($1,$2,$3,'device-b',$4,$5)", [deviceB.deviceId, ids.user, ids.vault, hashB.subarray(0, 16), hashB]);
   const bootstrapB = await request(deviceB.token, "/v1/bootstrap/bind", { method: "POST", body: JSON.stringify({ expectedVaultId: ids.vault }) });

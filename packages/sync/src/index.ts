@@ -1,4 +1,4 @@
-import type { SyncConflict, SyncMutation, SyncRecord } from '@space/protocol';
+import type { SyncConflict, SyncMutation, SyncRecord } from '@empty/protocol';
 
 export interface SyncState {
   revision: number;

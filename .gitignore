@@ -14,7 +14,7 @@ coverage/
 .idea/
 .vscode/
 DerivedData/
-apps/ios/Space.xcodeproj/
+apps/ios/Empty.xcodeproj/
 *.xcuserstate
 apps/api/data/
 artifacts/

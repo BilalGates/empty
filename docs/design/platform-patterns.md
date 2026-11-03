@@ -6,12 +6,12 @@
 
 El popup es una herramienta contextual, no el vault completo. Ancho objetivo entre 340 y 400 CSS px, altura adaptable y scroll interno único. Su anatomía:
 
-1. cabecera compacta con `Space`, estado de bloqueo o sync y acceso a opciones;
+1. cabecera compacta con `Empty`, estado de bloqueo o sync y acceso a opciones;
 2. origen actual como contexto de seguridad;
 3. búsqueda cuando hay varias opciones o no hay coincidencia;
 4. credenciales como lista continua;
 5. acción contextual principal;
-6. enlace `Abrir Space` para gestión completa.
+6. enlace `Abrir Empty` para gestión completa.
 
 No incluye sidebar, tabs persistentes, métricas, saludo, plan de pago, actividad ni una cuadrícula de accesos rápidos.
 
@@ -31,7 +31,7 @@ Estados mínimos:
 
 ### Popup: reglas de foco
 
-- Apertura desde icono: foco en `Desbloquear Space`, coincidencia primaria o búsqueda según estado.
+- Apertura desde icono: foco en `Desbloquear Empty`, coincidencia primaria o búsqueda según estado.
 - `Escape` cierra menú o diálogo antes que el popup.
 - Cerrar y reabrir no debe revelar el último secreto mostrado.
 - Los menús usan patrón nativo y no quedan recortados por el contenedor.
@@ -48,11 +48,11 @@ El affordance junto al campo debe ser pequeño, reconocible y no alterar el layo
 - no envía el vault completo al content script;
 - se cierra ante navegación, cambio de origen, bloqueo o `Escape`.
 
-Una página no puede imitar una confirmación privilegiada de Space. Las decisiones sensibles ocurren en contexto de extensión confiable.
+Una página no puede imitar una confirmación privilegiada de Empty. Las decisiones sensibles ocurren en contexto de extensión confiable.
 
 ### Guardar y actualizar
 
-La invitación aparece después de evidencia suficiente de submit exitoso. Debe permitir revisar origen y usuario. Si la detección es incierta, se ofrece abrir Space con campos propuestos en lugar de guardar automáticamente.
+La invitación aparece después de evidencia suficiente de submit exitoso. Debe permitir revisar origen y usuario. Si la detección es incierta, se ofrece abrir Empty con campos propuestos en lugar de guardar automáticamente.
 
 ## iOS
 
@@ -60,7 +60,7 @@ La invitación aparece después de evidencia suficiente de submit exitoso. Debe 
 
 Usa NavigationStack y patrones SwiftUI estándar. En iPhone:
 
-- pantalla raíz: título `Space`, búsqueda, lista de credenciales y acción crear;
+- pantalla raíz: título `Empty`, búsqueda, lista de credenciales y acción crear;
 - filtros o grupos en sheet o navegación secundaria cuando sean necesarios, no como sidebar comprimida;
 - detalle mediante push;
 - edición mediante sheet o push coherente, con `Cancelar` y `Guardar` en posiciones nativas;
@@ -84,7 +84,7 @@ Optimiza para límites estrictos de tiempo y memoria:
 3. devolver la credencial seleccionada;
 4. cerrar sin retener contenido sensible.
 
-Con coincidencia única segura, la sugerencia rápida usa nombre de servicio y usuario. Con varias, abre búsqueda. Sin datos locales disponibles, explica `Abre Space para sincronizar tu vault` y ofrece la acción permitida por el sistema.
+Con coincidencia única segura, la sugerencia rápida usa nombre de servicio y usuario. Con varias, abre búsqueda. Sin datos locales disponibles, explica `Abre Empty para sincronizar tu vault` y ofrece la acción permitida por el sistema.
 
 El proveedor no intenta convertirse en una versión reducida de toda la app. Edición, importación, exportación y gestión de dispositivos viven en la app host.
 

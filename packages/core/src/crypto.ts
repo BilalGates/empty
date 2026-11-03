@@ -1,7 +1,7 @@
 import { xchacha20poly1305 } from '@noble/ciphers/chacha';
 import { argon2id } from '@noble/hashes/argon2';
-import type { Argon2idParameters, EncryptedVault, KeyEnvelope, VaultDocument } from '@space/protocol';
-import { assertVaultDocument, canonicalJson, ENVELOPE_VERSION, VAULT_FORMAT_VERSION } from '@space/protocol';
+import type { Argon2idParameters, EncryptedVault, KeyEnvelope, VaultDocument } from '@empty/protocol';
+import { assertVaultDocument, canonicalJson, ENVELOPE_VERSION, VAULT_FORMAT_VERSION } from '@empty/protocol';
 import { fromBase64Url, fromUtf8, toBase64Url, utf8, wipe } from './encoding.js';
 
 export const DEFAULT_KDF = Object.freeze({ memoryKiB: 64 * 1024, iterations: 3, parallelism: 4 });
@@ -29,15 +29,15 @@ function randomBytes(length: number): Uint8Array {
 }
 
 function passwordAad(vaultId: string, kdf: Argon2idParameters): Uint8Array {
-  return utf8(canonicalJson({ context: 'space/vault-key-envelope', vaultId, envelopeVersion: 1, kind: 'master-password', kdf }));
+  return utf8(canonicalJson({ context: 'empty/vault-key-envelope', vaultId, envelopeVersion: 1, kind: 'master-password', kdf }));
 }
 
 function recoveryAad(vaultId: string): Uint8Array {
-  return utf8(canonicalJson({ context: 'space/vault-key-envelope', vaultId, envelopeVersion: 1, kind: 'recovery-key' }));
+  return utf8(canonicalJson({ context: 'empty/vault-key-envelope', vaultId, envelopeVersion: 1, kind: 'recovery-key' }));
 }
 
 function payloadAad(vaultId: string, revision: number): Uint8Array {
-  return utf8(canonicalJson({ context: 'space/vault-payload', vaultId, formatVersion: 1, revision }));
+  return utf8(canonicalJson({ context: 'empty/vault-payload', vaultId, formatVersion: 1, revision }));
 }
 
 function derivePasswordKey(password: string, kdf: Argon2idParameters): Uint8Array {

@@ -4,13 +4,13 @@ import { hkdf } from '@noble/hashes/hkdf';
 import { sha256 } from '@noble/hashes/sha2';
 import {
   decodeKeySlotAad, decodeKeySlotRecord, encodeKeySlotAad, encodeKeySlotRecord, KEY_SLOT_ARGON2ID, type KeySlotAad
-} from '@space/protocol';
+} from '@empty/protocol';
 import { wipe } from './encoding.js';
 
 const encoder = new TextEncoder();
-const PASSWORD_KEK_INFO = encoder.encode('space/password-kek/v1');
-const RECOVERY_KEK_INFO = encoder.encode('space/recovery-kek/v1');
-const RECOVERY_CHECK_PREFIX = encoder.encode('space/recovery-check/v1');
+const PASSWORD_KEK_INFO = encoder.encode('empty/password-kek/v1');
+const RECOVERY_KEK_INFO = encoder.encode('empty/recovery-kek/v1');
+const RECOVERY_CHECK_PREFIX = encoder.encode('empty/recovery-check/v1');
 const BASE32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/u;
 

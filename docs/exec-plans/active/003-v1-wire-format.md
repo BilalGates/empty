@@ -27,7 +27,7 @@ Status: in progress; no production activation.
 
 ## Threat and migration impact
 
-The new helpers are not used by the existing Chrome JSON preview vault or iOS AES-GCM local cache. No vault data is migrated, no unlock/recovery behavior changes, and no new artifact is accepted from storage or the network. The helper's main risks are divergent serialization, parser resource exhaustion, and context substitution when later connected to persistence or sync; bounds, AEAD and trusted-context comparison address them locally, while the integration gate above remains mandatory. Existing preview data must never be relabeled as `space.vault/1`; a later migration needs an authenticated, resumable N-1 to N plan and recovery test.
+The new helpers are not used by the existing Chrome JSON preview vault or iOS AES-GCM local cache. No vault data is migrated, no unlock/recovery behavior changes, and no new artifact is accepted from storage or the network. The helper's main risks are divergent serialization, parser resource exhaustion, and context substitution when later connected to persistence or sync; bounds, AEAD and trusted-context comparison address them locally, while the integration gate above remains mandatory. Existing preview data must never be relabeled as `empty.vault/1`; a later migration needs an authenticated, resumable N-1 to N plan and recovery test.
 
 The origin grammar is intentionally narrower than the preview's URL handling. A later migration must surface unsupported IDN/IPv6 origins for explicit user resolution without silently dropping credentials or broadening AutoFill matches; recovery data and key slots are unchanged by this isolated validator.
 

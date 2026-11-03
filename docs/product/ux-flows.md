@@ -2,7 +2,7 @@
 
 ## Onboarding y primer secreto
 
-1. **Bienvenida:** explica en dos frases que Space guarda un vault cifrado y que el servidor no puede recuperarlo por sí solo. Acción: `Crear mi vault`.
+1. **Bienvenida:** explica en dos frases que Empty guarda un vault cifrado y que el servidor no puede recuperarlo por sí solo. Acción: `Crear mi vault`.
 2. **Cuenta:** passkey cuando esté disponible o método soportado. No se pide todavía la contraseña maestra.
 3. **Vault:** crear contraseña maestra, confirmar y comprobar requisitos mientras se escribe. Nunca se usa una “puntuación” teatral.
 4. **Recovery:** generar recovery key, guardarla y verificar una parte. Explicar con lenguaje literal qué ocurre si se pierden todos los métodos.
@@ -12,7 +12,7 @@
 
 ## Encontrar y usar una credencial
 
-1. Abrir Space sitúa el foco en búsqueda si hay teclado físico, salvo que la apertura provenga de un campo detectable.
+1. Abrir Empty sitúa el foco en búsqueda si hay teclado físico, salvo que la apertura provenga de un campo detectable.
 2. La lista muestra título, usuario y origen. Contraseña, notas y timestamps no aparecen en la lista.
 3. Seleccionar abre el detalle sin perder la posición de búsqueda.
 4. `Copiar usuario`, `Copiar contraseña`, `Mostrar contraseña` y `Editar credencial` son acciones inequívocas.
@@ -22,10 +22,10 @@
 ## Chrome: rellenar en una página
 
 1. El popup identifica el origen actual en la cabecera de contenido, sin URL completa ruidosa.
-2. Si está bloqueado, la acción primaria es `Desbloquear Space`.
+2. Si está bloqueado, la acción primaria es `Desbloquear Empty`.
 3. Con una coincidencia segura, la credencial ocupa el primer plano y la acción es `Rellenar credencial`.
 4. Con varias coincidencias, se listan por título y usuario. La más reciente no se preselecciona de forma destructiva.
-5. Sin coincidencias, se ofrece `Buscar en Space`; `Crear para este sitio` aparece solo si se detecta un formulario compatible.
+5. Sin coincidencias, se ofrece `Buscar en Empty`; `Crear para este sitio` aparece solo si se detecta un formulario compatible.
 6. Una coincidencia aproximada nunca se rellena como exacta. Se explica la diferencia y la acción requiere elección explícita.
 7. Tras rellenar, el popup puede cerrarse. El anuncio accesible ocurre antes del cierre cuando sea necesario.
 
@@ -61,7 +61,7 @@
 4. Recuperar, sincronizar y validar una muestra localmente.
 5. Invitar a rotar credenciales comprometidas y crear una recovery key nueva cuando proceda.
 
-El estado sin ningún método válido es terminal: Space explica que el vault no puede descifrarse. No ofrece soporte como vía ficticia de recuperación.
+El estado sin ningún método válido es terminal: Empty explica que el vault no puede descifrarse. No ofrece soporte como vía ficticia de recuperación.
 
 ## Importación
 

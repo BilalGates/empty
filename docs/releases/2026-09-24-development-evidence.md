@@ -1,12 +1,12 @@
 # Development evidence — 2026-09-24
 
-Branch: `feat/space-foundation`, uncommitted development increment. This is not a release approval.
+Branch: `feat/empty-foundation`, uncommitted development increment. This is not a release approval.
 
 ## Passed locally
 
 - `npm run check`: lint, TypeScript, 50 Vitest tests, 11 extension tests, and all workspace builds.
 - `npm run security:secrets`, `npm run security:permissions`, `node scripts/check-migrations.mjs`, and `git diff --check`.
-- `npm test --workspace @space/protocol`: 19 tests, including deterministic CBOR rejection and three shared AAD vectors at integer-width boundaries.
+- `npm test --workspace @empty/protocol`: 19 tests, including deterministic CBOR rejection and three shared AAD vectors at integer-width boundaries.
 - Swift AAD encoder matched all three JSON vectors in a standalone macOS executable.
 - `bash scripts/ios-build-gate.sh`: Xcode 26.6 Release simulator build passed after XcodeGen generated both Info.plists and the required app/provider entitlements. The gate now asserts the entitlement values.
 - `xcodebuild ... test` on iPhone 17 Pro, iOS 26.5 simulator: Xcode result bundle reported 43 passed, zero failed, zero skipped.

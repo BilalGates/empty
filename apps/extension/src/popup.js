@@ -36,13 +36,13 @@ function inputField(labelText, type, name, options = {}) {
 }
 
 async function refresh() {
-  showResponse(await chrome.runtime.sendMessage({ type: "SPACE_GET_STATE", ...context }));
+  showResponse(await chrome.runtime.sendMessage({ type: "EMPTY_GET_STATE", ...context }));
 }
 
 function vaultAccess(hasVault) {
   content.replaceChildren();
   const heading = document.createElement("h2");
-  heading.textContent = hasVault ? "Unlock Space" : "Create your vault";
+  heading.textContent = hasVault ? "Unlock Empty" : "Create your vault";
   const form = document.createElement("form");
   const password = inputField("Master password", "password", "master-password", { autocomplete: hasVault ? "current-password" : "new-password" });
   form.append(password.label);
@@ -64,14 +64,14 @@ function vaultAccess(hasVault) {
     if (confirmation && password.input.value !== confirmation.input.value) { error.textContent = "Passwords do not match."; return; }
     submit.disabled = true;
     submit.textContent = hasVault ? "Unlocking…" : "Creating…";
-    const response = await chrome.runtime.sendMessage({ type: hasVault ? "SPACE_UNLOCK" : "SPACE_CREATE_VAULT", password: password.input.value });
+    const response = await chrome.runtime.sendMessage({ type: hasVault ? "EMPTY_UNLOCK" : "EMPTY_CREATE_VAULT", password: password.input.value });
     password.input.value = "";
     if (confirmation) confirmation.input.value = "";
     if (!response?.ok) { error.textContent = hasVault ? "The master password is incorrect." : "The vault could not be created."; submit.disabled = false; submit.textContent = hasVault ? "Unlock" : "Create vault"; return; }
     if (response.recoveryKey) {
       content.replaceChildren();
       const title = document.createElement("h2"); title.textContent = "Save your recovery key";
-      const warning = document.createElement("p"); warning.textContent = "This is the only time Space will show it. Store it offline.";
+      const warning = document.createElement("p"); warning.textContent = "This is the only time Empty will show it. Store it offline.";
       const key = document.createElement("code"); key.className = "recovery-key"; key.textContent = response.recoveryKey;
       const done = document.createElement("button"); done.type = "button"; done.textContent = "I saved it"; done.addEventListener("click", refresh);
       content.append(title, warning, key, done);
@@ -85,8 +85,8 @@ function vaultAccess(hasVault) {
 function appendRestoreBackup(hasVault) {
   const restore = document.createElement("details");
   const restoreSummary = document.createElement("summary"); restoreSummary.textContent = "Restore encrypted backup";
-  const restoreCopy = document.createElement("p"); restoreCopy.className = "muted"; restoreCopy.textContent = "Space validates and decrypts the backup locally before replacing anything.";
-  const restoreFile = inputField("Space backup", "file", "restore-file"); restoreFile.input.accept = ".json,application/json";
+  const restoreCopy = document.createElement("p"); restoreCopy.className = "muted"; restoreCopy.textContent = "Empty validates and decrypts the backup locally before replacing anything.";
+  const restoreFile = inputField("Empty backup", "file", "restore-file"); restoreFile.input.accept = ".json,application/json";
   const methodLabel = document.createElement("label"); methodLabel.textContent = "Recovery method";
   const method = document.createElement("select"); method.name = "restore-method";
   const passwordOption = document.createElement("option"); passwordOption.value = "password"; passwordOption.textContent = "Master password";
@@ -104,11 +104,11 @@ function appendRestoreBackup(hasVault) {
   const restoreFeedback = document.createElement("p"); restoreFeedback.className = "form-error"; restoreFeedback.setAttribute("role", "alert");
   restoreButton.addEventListener("click", async () => {
     const file = restoreFile.input.files?.[0]; restoreFeedback.textContent = "";
-    if (!file) { restoreFeedback.textContent = "Choose an encrypted Space backup first."; return; }
+    if (!file) { restoreFeedback.textContent = "Choose an encrypted Empty backup first."; return; }
     if (file.size > 20_000_000) { restoreFeedback.textContent = "The backup exceeds the 20 MB restore limit."; return; }
     if (hasVault && !replacementCheck.checked) { restoreFeedback.textContent = "Confirm replacement of the current vault."; return; }
     restoreButton.disabled = true; restoreButton.textContent = "Validating…";
-    const response = await chrome.runtime.sendMessage({ type: "SPACE_RESTORE_BACKUP", ...context, method: method.value, secret: restoreSecret.input.value, content: await file.text(), replaceConfirmed: !hasVault || replacementCheck.checked });
+    const response = await chrome.runtime.sendMessage({ type: "EMPTY_RESTORE_BACKUP", ...context, method: method.value, secret: restoreSecret.input.value, content: await file.text(), replaceConfirmed: !hasVault || replacementCheck.checked });
     restoreSecret.input.value = ""; restoreFile.input.value = "";
     if (response?.ok) { restoreFeedback.textContent = `${response.restored} credentials restored.`; setTimeout(refresh, 800); return; }
     restoreButton.disabled = false; restoreButton.textContent = "Validate and restore";
@@ -130,14 +130,14 @@ function appendVaultActions() {
   form.append(title.label, username.label, password.label, submit, error);
   form.addEventListener("submit", async (event) => {
     event.preventDefault(); submit.disabled = true; error.textContent = "";
-    const response = await chrome.runtime.sendMessage({ type: "SPACE_ADD_CREDENTIAL", ...context, title: title.input.value, username: username.input.value, password: password.input.value });
+    const response = await chrome.runtime.sendMessage({ type: "EMPTY_ADD_CREDENTIAL", ...context, title: title.input.value, username: username.input.value, password: password.input.value });
     password.input.value = "";
-    if (response?.ok) await refresh(); else { submit.disabled = false; error.textContent = response?.error === "locked" ? "Space locked. Unlock it again." : "The login could not be saved."; }
+    if (response?.ok) await refresh(); else { submit.disabled = false; error.textContent = response?.error === "locked" ? "Empty locked. Unlock it again." : "The login could not be saved."; }
   });
   details.append(summary, form);
   const importer = document.createElement("details");
   const importSummary = document.createElement("summary"); importSummary.textContent = "Import from Chrome CSV";
-  const warning = document.createElement("p"); warning.className = "muted"; warning.textContent = "The file contains plaintext passwords. Space reads it locally and never uploads it.";
+  const warning = document.createElement("p"); warning.className = "muted"; warning.textContent = "The file contains plaintext passwords. Empty reads it locally and never uploads it.";
   const fileField = inputField("Chrome password CSV", "file", "import-file", { required: true });
   fileField.input.accept = ".csv,text/csv";
   const review = document.createElement("button"); review.type = "button"; review.className = "secondary"; review.textContent = "Review import";
@@ -148,16 +148,16 @@ function appendVaultActions() {
     if (!file) { result.textContent = "Choose a CSV file first."; return; }
     if (file.size > 5_000_000) { result.textContent = "The CSV exceeds the 5 MB import limit."; return; }
     review.disabled = true; review.textContent = "Reviewing…";
-    const response = await chrome.runtime.sendMessage({ type: "SPACE_PREVIEW_IMPORT", ...context, csv: await file.text() });
+    const response = await chrome.runtime.sendMessage({ type: "EMPTY_PREVIEW_IMPORT", ...context, csv: await file.text() });
     review.disabled = false; review.textContent = "Review import";
     if (!response?.ok) { result.textContent = "This CSV could not be read. Export it again from Chrome and retry."; return; }
     importToken = response.token;
     const summaryText = document.createElement("p"); summaryText.textContent = `${response.accepted} ready, ${response.duplicates} duplicates, ${response.issueCount} invalid.`;
     const confirm = document.createElement("button"); confirm.type = "button"; confirm.textContent = `Import ${response.accepted} credentials`; confirm.disabled = response.accepted === 0;
     confirm.addEventListener("click", async () => {
-      confirm.disabled = true; const committed = await chrome.runtime.sendMessage({ type: "SPACE_COMMIT_IMPORT", ...context, token: importToken });
+      confirm.disabled = true; const committed = await chrome.runtime.sendMessage({ type: "EMPTY_COMMIT_IMPORT", ...context, token: importToken });
       if (committed?.ok) { result.textContent = `${committed.imported} credentials imported. Delete the original CSV securely.`; setTimeout(refresh, 1200); }
-      else { result.textContent = "The review expired or Space locked. Review the file again."; }
+      else { result.textContent = "The review expired or Empty locked. Review the file again."; }
     });
     result.append(summaryText, confirm);
   });
@@ -170,7 +170,7 @@ function appendVaultActions() {
   const backupFeedback = document.createElement("p"); backupFeedback.className = "form-error"; backupFeedback.setAttribute("role", "alert");
   download.addEventListener("click", async () => {
     download.disabled = true; backupFeedback.textContent = "";
-    const response = await chrome.runtime.sendMessage({ type: "SPACE_EXPORT_BACKUP", ...context, password: backupPassword.input.value });
+    const response = await chrome.runtime.sendMessage({ type: "EMPTY_EXPORT_BACKUP", ...context, password: backupPassword.input.value });
     backupPassword.input.value = "";
     if (!response?.ok) { download.disabled = false; backupFeedback.textContent = response?.error === "invalid-credentials" ? "The master password is incorrect." : "The backup could not be created."; return; }
     const url = URL.createObjectURL(new Blob([response.content], { type: "application/json" }));
@@ -179,8 +179,8 @@ function appendVaultActions() {
     download.disabled = false; backupFeedback.textContent = "Encrypted backup downloaded.";
   });
   backup.append(backupSummary, backupCopy, backupPassword.label, download, backupFeedback);
-  const lock = document.createElement("button"); lock.type = "button"; lock.className = "text-button"; lock.textContent = "Lock Space";
-  lock.addEventListener("click", async () => { await chrome.runtime.sendMessage({ type: "SPACE_LOCK" }); await refresh(); });
+  const lock = document.createElement("button"); lock.type = "button"; lock.className = "text-button"; lock.textContent = "Lock Empty";
+  lock.addEventListener("click", async () => { await chrome.runtime.sendMessage({ type: "EMPTY_LOCK" }); await refresh(); });
   content.append(details, importer, backup);
   appendRestoreBackup(true);
   content.append(lock);
@@ -209,8 +209,8 @@ function notice(title, body, { focus = false, urgent = false } = {}) {
 }
 
 async function copyCredentialValue(credentialId, field, feedback) {
-  const response = await chrome.runtime.sendMessage({ type: "SPACE_GET_SECRET", ...context, credentialId });
-  if (!response?.ok) { feedback.textContent = "Space locked. Unlock it again."; return; }
+  const response = await chrome.runtime.sendMessage({ type: "EMPTY_GET_SECRET", ...context, credentialId });
+  if (!response?.ok) { feedback.textContent = "Empty locked. Unlock it again."; return; }
   await navigator.clipboard.writeText(response[field]);
   feedback.textContent = field === "password" ? "Password copied." : "Username copied.";
   setTimeout(() => { feedback.textContent = ""; }, 1800);
@@ -218,7 +218,7 @@ async function copyCredentialValue(credentialId, field, feedback) {
 
 async function renderCredentialEditor(credential) {
   concealRevealed();
-  const secret = await chrome.runtime.sendMessage({ type: "SPACE_GET_SECRET", ...context, credentialId: credential.id });
+  const secret = await chrome.runtime.sendMessage({ type: "EMPTY_GET_SECRET", ...context, credentialId: credential.id });
   if (!secret?.ok) { await refresh(); return; }
   content.replaceChildren();
   const heading = document.createElement("h2"); heading.textContent = "Edit login";
@@ -233,7 +233,7 @@ async function renderCredentialEditor(credential) {
   form.append(title.label, website.label, username.label, password.label, save, cancel, error);
   form.addEventListener("submit", async (event) => {
     event.preventDefault(); save.disabled = true; error.textContent = "";
-    const response = await chrome.runtime.sendMessage({ type: "SPACE_UPDATE_CREDENTIAL", ...context, credentialId: credential.id, title: title.input.value, website: website.input.value, username: username.input.value, password: password.input.value });
+    const response = await chrome.runtime.sendMessage({ type: "EMPTY_UPDATE_CREDENTIAL", ...context, credentialId: credential.id, title: title.input.value, website: website.input.value, username: username.input.value, password: password.input.value });
     password.input.value = "";
     if (response?.ok) await refresh();
     else { save.disabled = false; error.textContent = response?.error === "unsafe-origin" ? "Use HTTPS, or HTTP only for localhost." : "The login could not be updated."; }
@@ -247,7 +247,7 @@ async function renderCredentialEditor(credential) {
     keep.addEventListener("click", () => { deleteArea.replaceChildren(startDelete); startDelete.focus(); });
     confirmDelete.addEventListener("click", async () => {
       confirmDelete.disabled = true;
-      const response = await chrome.runtime.sendMessage({ type: "SPACE_DELETE_CREDENTIAL", ...context, credentialId: credential.id });
+      const response = await chrome.runtime.sendMessage({ type: "EMPTY_DELETE_CREDENTIAL", ...context, credentialId: credential.id });
       if (response?.ok) await refresh(); else { confirmDelete.disabled = false; error.textContent = "The login could not be deleted."; }
     });
     deleteArea.replaceChildren(prompt, keep, confirmDelete); keep.focus();
@@ -259,7 +259,7 @@ async function renderCredentialEditor(credential) {
 
 function renderCredentialList(response) {
   content.replaceChildren();
-  const search = inputField("Search Space", "search", "search", { required: false, autocomplete: "off" });
+  const search = inputField("Search Empty", "search", "search", { required: false, autocomplete: "off" });
   search.input.placeholder = "Name, username, or site";
   const list = document.createElement("div");
   list.className = "credential-list";
@@ -295,8 +295,8 @@ function renderCredentialList(response) {
       const value = document.createElement("code"); value.className = "revealed-password"; value.hidden = true;
       reveal.addEventListener("click", async () => {
         if (!value.hidden) { concealRevealed(); return; }
-        const secret = await chrome.runtime.sendMessage({ type: "SPACE_GET_SECRET", ...context, credentialId: credential.id });
-        if (!secret?.ok) { feedback.textContent = "Space locked. Unlock it again."; return; }
+        const secret = await chrome.runtime.sendMessage({ type: "EMPTY_GET_SECRET", ...context, credentialId: credential.id });
+        if (!secret?.ok) { feedback.textContent = "Empty locked. Unlock it again."; return; }
         concealRevealed();
         value.textContent = secret.password; value.hidden = false; reveal.textContent = "Hide password";
         revealed = { value, button: reveal };
@@ -316,19 +316,19 @@ function showResponse(response) {
   status.hidden = true;
   content.hidden = false;
   if (!response?.ok || response.state === "blocked") {
-    notice("Space is unavailable here", "For safety, filling works only on secure web pages you explicitly open.");
+    notice("Empty is unavailable here", "For safety, filling works only on secure web pages you explicitly open.");
     generator.hidden = true;
     return;
   }
   if (response.form?.kind === "signup" || response.form?.kind === "password-change") {
-    notice("Review before filling", "Space does not automatically fill new or changed passwords.");
+    notice("Review before filling", "Empty does not automatically fill new or changed passwords.");
   } else if (response.state === "locked") {
     generator.hidden = true;
     vaultAccess(response.hasVault);
     return;
   } else if (response.state === "empty") {
     if (response.allCredentials?.length) renderCredentialList(response);
-    else notice("No login for this site", "Create one in Space, then return here to fill it.");
+    else notice("No login for this site", "Create one in Empty, then return here to fill it.");
   } else {
     renderCredentialList(response);
   }
@@ -339,15 +339,15 @@ function showResponse(response) {
 async function fill(credentialId) {
   const button = content.querySelector(`[data-credential-id="${CSS.escape(credentialId)}"]`);
   if (button) button.disabled = true;
-  const response = await chrome.runtime.sendMessage({ type: "SPACE_FILL", tabId: context.tabId, origin: context.origin, credentialId });
+  const response = await chrome.runtime.sendMessage({ type: "EMPTY_FILL", tabId: context.tabId, origin: context.origin, credentialId });
   if (response?.ok) window.close();
-  else notice("Could not fill", response?.error === "confirmation-required" ? "Review this form and fill it manually." : "The page changed. Reopen Space and try again.", { focus: true, urgent: true });
+  else notice("Could not fill", response?.error === "confirmation-required" ? "Review this form and fill it manually." : "The page changed. Reopen Empty and try again.", { focus: true, urgent: true });
 }
 
 regenerate.addEventListener("click", regeneratePassword);
 fillGenerated.addEventListener("click", async () => {
   fillGenerated.disabled = true;
-  const response = await chrome.runtime.sendMessage({ type: "SPACE_FILL_GENERATED", tabId: context.tabId, origin: context.origin, password: generatedPassword });
+  const response = await chrome.runtime.sendMessage({ type: "EMPTY_FILL_GENERATED", tabId: context.tabId, origin: context.origin, password: generatedPassword });
   if (response?.ok) window.close();
   else {
     fillGenerated.disabled = false;
@@ -363,5 +363,5 @@ if (!tab?.id || !origin || !isAutofillAllowed(origin)) {
   context = { tabId: tab.id, origin };
   originLabel.textContent = new URL(origin).hostname;
   regeneratePassword();
-  showResponse(await chrome.runtime.sendMessage({ type: "SPACE_GET_STATE", ...context }));
+  showResponse(await chrome.runtime.sendMessage({ type: "EMPTY_GET_STATE", ...context }));
 }

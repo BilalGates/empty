@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-Space apunta a WCAG 2.2 AA en superficies web y extensión, y a los patrones de accesibilidad nativos de iOS. Para texto principal se busca contraste 7:1 cuando no comprometa estados semánticos.
+Empty apunta a WCAG 2.2 AA en superficies web y extensión, y a los patrones de accesibilidad nativos de iOS. Para texto principal se busca contraste 7:1 cuando no comprometa estados semánticos.
 
 ## Teclado y foco
 

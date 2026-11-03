@@ -6,7 +6,7 @@ export function createPool(connectionString: string, sslMode: "disable" | "requi
     max: 20,
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 5_000,
-    application_name: "space-api",
+    application_name: "empty-api",
     ...(sslMode === "require" ? { ssl: { rejectUnauthorized: true } } : {})
   });
 }

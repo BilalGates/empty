@@ -16,7 +16,7 @@ const vectors = vectorNames.map(name => JSON.parse(
 ) as AadVector);
 const vector = vectors[0]!;
 
-describe('deterministic CBOR for space.vault/1', () => {
+describe('deterministic CBOR for empty.vault/1', () => {
   it.each(vectors)('matches independently constructed object AAD vector at version $objectVersion and epoch $epoch', current => {
     const aad = encodeVaultObjectAad({
       vaultId: bytes(current.vaultIdHex), objectId: bytes(current.objectIdHex), objectType: current.objectType,

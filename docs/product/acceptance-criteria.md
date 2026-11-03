@@ -35,7 +35,7 @@ Antes de release candidate, pruebas moderadas con al menos cinco participantes d
 - 4 de 5 distinguen cuenta y vault sin recurrir a terminología criptográfica;
 - 4 de 5 detectan correctamente una advertencia por dominio parecido;
 - 4 de 5 completan importación y pueden explicar qué archivos siguen en texto plano;
-- 4 de 5 resuelven un conflicto sin creer que Space combinó passwords automáticamente.
+- 4 de 5 resuelven un conflicto sin creer que Empty combinó passwords automáticamente.
 
 Un fallo no se corrige añadiendo más texto por defecto. Primero se revisan orden, etiqueta, agrupación y momento de la información.
 

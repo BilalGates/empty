@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { VaultDocument } from '@space/protocol';
+import type { VaultDocument } from '@empty/protocol';
 import { changeMasterPassword, createEncryptedVault, generatePassword, importChromeCsv, matchesOrigin, openEncryptedVaultWithSessionKey, unlockVaultSessionWithPassword, unlockVaultSessionWithRecoveryKey, unlockWithPassword, unlockWithRecoveryKey, updateEncryptedVault, updateEncryptedVaultWithSessionKey } from './index.js';
 
 const testCost = { memoryKiB: 64 * 1024, iterations: 3, parallelism: 1 };

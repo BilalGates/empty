@@ -2,8 +2,8 @@ import { chooseFillTargets, detectDocument } from "./detection.js";
 import { originsMatch } from "./origin.js";
 import { isMessage } from "./protocol.js";
 
-if (!globalThis.__spaceContentInstalled) {
-  globalThis.__spaceContentInstalled = true;
+if (!globalThis.__emptyContentInstalled) {
+  globalThis.__emptyContentInstalled = true;
   let lastSignature = "";
   let scheduled = false;
 
@@ -13,7 +13,7 @@ if (!globalThis.__spaceContentInstalled) {
     const signature = `${location.origin}:${result.kind}:${result.usernameCount}:${result.passwordCount}`;
     if (signature === lastSignature) return;
     lastSignature = signature;
-    chrome.runtime.sendMessage({ type: "SPACE_FORM_STATE", origin: location.origin, kind: result.kind,
+    chrome.runtime.sendMessage({ type: "EMPTY_FORM_STATE", origin: location.origin, kind: result.kind,
       usernameCount: result.usernameCount, passwordCount: result.passwordCount }).catch(() => {});
   };
   const schedule = () => {
@@ -29,12 +29,12 @@ if (!globalThis.__spaceContentInstalled) {
 
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (!isMessage(message)) return false;
-    if (message.type === "SPACE_CONTENT_SCAN") {
+    if (message.type === "EMPTY_CONTENT_SCAN") {
       const { kind, usernameCount, passwordCount } = detectDocument();
       sendResponse({ ok: true, kind, usernameCount, passwordCount });
       return false;
     }
-    if (message.type !== "SPACE_CONTENT_FILL") return false;
+    if (message.type !== "EMPTY_CONTENT_FILL") return false;
     if (!originsMatch(message.origin, location.origin)) {
       sendResponse({ ok: false, error: "origin-mismatch" });
       return false;

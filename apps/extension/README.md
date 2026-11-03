@@ -1,4 +1,4 @@
-# Space Chrome extension
+# Empty Chrome extension
 
 Manifest V3 implementation for a local encrypted preview vault and explicit, origin-bound credential filling. It has no host permissions: opening the toolbar popup grants `activeTab`, after which the service worker injects the bundled content script into the top frame only.
 
@@ -12,7 +12,7 @@ Manifest V3 implementation for a local encrypted preview vault and explicit, ori
 - Runtime messages use a small validated allowlist. Extension-page requests are accepted only from this extension; page reports must come from a Chrome tab.
 - The build bundles local source only. There is no remote code, analytics, or externally loaded asset.
 
-The popup creates a vault, displays its recovery key once, unlocks, adds origin-scoped credentials, searches only non-secret metadata, copies on explicit action, reveals at most one password for 15 seconds, locks manually, and fills only a selected exact-origin credential. The current encrypted JSON container is a preview format, not the normative CBOR per-object `space.vault/1` protocol; do not use it for real credentials until the cross-platform vector gate is closed.
+The popup creates a vault, displays its recovery key once, unlocks, adds origin-scoped credentials, searches only non-secret metadata, copies on explicit action, reveals at most one password for 15 seconds, locks manually, and fills only a selected exact-origin credential. The current encrypted JSON container is a preview format, not the normative CBOR per-object `empty.vault/1` protocol; do not use it for real credentials until the cross-platform vector gate is closed.
 
 Chrome CSV import is parsed locally, reviewed before commit, and never written to
 persistent storage as plaintext. Credentials can be edited or tombstoned from global

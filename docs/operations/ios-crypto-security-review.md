@@ -4,7 +4,7 @@ Status: primitive scaffold accepted; production activation blocked.
 
 ## Scope and trust-boundary delta
 
-`SpaceVaultPrimitiveSuite` adds fixed-parameter Argon2id, HKDF-SHA-256, and XChaCha20-Poly1305-IETF to `SpaceShared`. It does not read or write the local cache, define AAD, serialize a vault record, or run from the app or AutoFill extension. The AES-GCM local preview remains unchanged and must not be uploaded as `space.vault/1`.
+`EmptyVaultPrimitiveSuite` adds fixed-parameter Argon2id, HKDF-SHA-256, and XChaCha20-Poly1305-IETF to `EmptyShared`. It does not read or write the local cache, define AAD, serialize a vault record, or run from the app or AutoFill extension. The AES-GCM local preview remains unchanged and must not be uploaded as `empty.vault/1`.
 
 The native-code surface is limited to pinned SwiftPM revisions of the PHC Argon2 reference implementation and swift-sodium's bundled libsodium. Exact provenance and binary hashes are recorded in `apps/ios/DEPENDENCIES.md`.
 

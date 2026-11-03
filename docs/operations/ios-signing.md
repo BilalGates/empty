@@ -7,10 +7,10 @@ Status: scaffolding; signing and device verification are release blockers.
 The development identifiers in `apps/ios/project.yml` must be registered to the selected team. An Apple Developer Account
 Holder or Admin must create and consistently configure:
 
-1. An explicit App ID for the host app (`com.space.app`).
-2. An explicit App ID for the credential provider (`com.space.app.credential-provider`).
-3. App Group `group.com.space.shared`, assigned only to those two App IDs.
-4. Keychain Sharing group `$(AppIdentifierPrefix)com.space.shared`, assigned only to
+1. An explicit App ID for the host app (`com.empty.app`).
+2. An explicit App ID for the credential provider (`com.empty.app.credential-provider`).
+3. App Group `group.com.empty.shared`, assigned only to those two App IDs.
+4. Keychain Sharing group `$(AppIdentifierPrefix)com.empty.shared`, assigned only to
    those two App IDs. The team prefix is not interchangeable with the Team ID for older
    accounts; inspect the generated provisioning profiles.
 5. The AutoFill Credential Provider capability on both targets.
@@ -25,9 +25,9 @@ entitlements with `codesign -d --entitlements :- <artifact>` rather than trustin
 ```sh
 cd apps/ios
 xcodegen generate
-xcodebuild -project Space.xcodeproj -scheme Space \
+xcodebuild -project Empty.xcodeproj -scheme Empty \
   -destination 'platform=iOS Simulator,name=iPhone 16' test
-xcodebuild -project Space.xcodeproj -scheme Space \
+xcodebuild -project Empty.xcodeproj -scheme Empty \
   -destination 'generic/platform=iOS' archive
 ```
 
@@ -37,7 +37,7 @@ AutoFill identity suggestions. Those require a signed build on a passcode-protec
 
 ## Mandatory physical-device matrix
 
-- Enable Space in **Settings > General > AutoFill & Passwords** and verify suggested
+- Enable Empty in **Settings > General > AutoFill & Passwords** and verify suggested
   identities include service, username, and opaque record ID but never the password.
 - Locked: tapping a suggestion must return `userInteractionRequired`; it must never return
   an empty or cached plaintext credential.
@@ -45,7 +45,7 @@ AutoFill identity suggestions. Those require a signed build on a passcode-protec
 - User cancellation and system cancellation: close without retry loops or alternate error
   oracles; no credential is returned.
 - Enroll/remove biometrics after provisioning: `.biometryCurrentSet` must invalidate the
-  local key. Space fails closed and requires the future master-password/recovery bootstrap;
+  local key. Empty fails closed and requires the future master-password/recovery bootstrap;
   it must not recreate a key over an existing encrypted cache.
 - Remove the device from the account: after authenticated sync marks it revoked, delete the
   local Keychain item and encrypted replica. Server revocation alone cannot erase a key the
@@ -62,7 +62,7 @@ AutoFill identity suggestions. Those require a signed build on a passcode-protec
 
 ## Security limitations and release blockers
 
-- `space.ios.local-cache/1` is local scaffolding, not the normative `space.vault/1`
+- `empty.ios.local-cache/1` is local scaffolding, not the normative `empty.vault/1`
   per-object format. Argon2id, HKDF, and XChaCha primitives now use pinned reference or
   libsodium implementations and initial positive/negative vectors. Production persistence
   remains blocked until Security approves deterministic CBOR/AAD, complete envelope,

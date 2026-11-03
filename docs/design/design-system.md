@@ -1,4 +1,4 @@
-# Sistema de diseño Space
+# Sistema de diseño Empty
 
 ## Dirección
 
@@ -20,21 +20,21 @@ Tokens base en OKLCH:
 
 ```css
 :root {
-  --space-bg: oklch(1 0 0);
-  --space-surface-subtle: oklch(0.965 0.004 270);
-  --space-surface-raised: oklch(0.985 0.002 270);
-  --space-ink: oklch(0.19 0.012 270);
-  --space-ink-muted: oklch(0.43 0.015 270);
-  --space-line: oklch(0.88 0.007 270);
-  --space-primary: oklch(0.56 0.12 270);
-  --space-primary-hover: oklch(0.50 0.13 270);
-  --space-primary-soft: oklch(0.94 0.025 270);
-  --space-on-primary: oklch(1 0 0);
-  --space-accent: oklch(0.46 0.11 210);
-  --space-danger: oklch(0.52 0.17 28);
-  --space-warning: oklch(0.57 0.12 75);
-  --space-success: oklch(0.47 0.11 152);
-  --space-focus: oklch(0.62 0.17 270);
+  --empty-bg: oklch(1 0 0);
+  --empty-surface-subtle: oklch(0.965 0.004 270);
+  --empty-surface-raised: oklch(0.985 0.002 270);
+  --empty-ink: oklch(0.19 0.012 270);
+  --empty-ink-muted: oklch(0.43 0.015 270);
+  --empty-line: oklch(0.88 0.007 270);
+  --empty-primary: oklch(0.56 0.12 270);
+  --empty-primary-hover: oklch(0.50 0.13 270);
+  --empty-primary-soft: oklch(0.94 0.025 270);
+  --empty-on-primary: oklch(1 0 0);
+  --empty-accent: oklch(0.46 0.11 210);
+  --empty-danger: oklch(0.52 0.17 28);
+  --empty-warning: oklch(0.57 0.12 75);
+  --empty-success: oklch(0.47 0.11 152);
+  --empty-focus: oklch(0.62 0.17 270);
 }
 ```
 
@@ -44,17 +44,17 @@ Modo oscuro, si se incluye en el milestone:
 
 ```css
 [data-theme="dark"] {
-  --space-bg: oklch(0.10 0 0);
-  --space-surface-subtle: oklch(0.15 0.006 270);
-  --space-surface-raised: oklch(0.18 0.007 270);
-  --space-ink: oklch(0.94 0.006 270);
-  --space-ink-muted: oklch(0.72 0.012 270);
-  --space-line: oklch(0.30 0.009 270);
-  --space-primary: oklch(0.70 0.12 270);
-  --space-primary-hover: oklch(0.76 0.11 270);
-  --space-primary-soft: oklch(0.24 0.04 270);
-  --space-on-primary: oklch(0.10 0 0);
-  --space-focus: oklch(0.76 0.14 270);
+  --empty-bg: oklch(0.10 0 0);
+  --empty-surface-subtle: oklch(0.15 0.006 270);
+  --empty-surface-raised: oklch(0.18 0.007 270);
+  --empty-ink: oklch(0.94 0.006 270);
+  --empty-ink-muted: oklch(0.72 0.012 270);
+  --empty-line: oklch(0.30 0.009 270);
+  --empty-primary: oklch(0.70 0.12 270);
+  --empty-primary-hover: oklch(0.76 0.11 270);
+  --empty-primary-soft: oklch(0.24 0.04 270);
+  --empty-on-primary: oklch(0.10 0 0);
+  --empty-focus: oklch(0.76 0.14 270);
 }
 ```
 
@@ -114,13 +114,13 @@ Texto específico, icono semántico y acciones claras. Un aviso de phishing u or
 
 ## Voz
 
-Breve, literal y humana. “Space está bloqueado” es preferible a “Sesión no disponible”. “No se pudo sincronizar. Tus cambios siguen guardados en este dispositivo” explica estado y consecuencia.
+Breve, literal y humana. “Empty está bloqueado” es preferible a “Sesión no disponible”. “No se pudo sincronizar. Tus cambios siguen guardados en este dispositivo” explica estado y consecuencia.
 
 Etiquetas:
 
 - `Crear credencial`, no `Nueva`;
 - `Copiar contraseña`, no `Copiar`;
 - `Exportar CSV sin cifrar`, no `Continuar`;
-- `Bloquear Space`, no `Cerrar`;
+- `Bloquear Empty`, no `Cerrar`;
 - `Volver a intentar sync`, no `Reintentar operación`.
 

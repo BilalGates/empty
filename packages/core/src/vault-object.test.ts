@@ -4,7 +4,7 @@ import { sha256 } from '@noble/hashes/sha2';
 import {
   decodeVaultObjectRecord, encodeVaultObjectRecord, MAX_OBJECT_PLAINTEXT_BYTES,
   type VaultObjectAad
-} from '@space/protocol';
+} from '@empty/protocol';
 import { describe, expect, it } from 'vitest';
 import { openPasswordVaultObject, openVaultObject, sealVaultObject } from './vault-object.js';
 
@@ -30,9 +30,9 @@ const aad: VaultObjectAad = {
 const vrk = bytes(vector.vrkHex);
 const artifact = bytes(vector.artifactHex);
 
-describe('space.vault/1 per-object envelope', () => {
+describe('empty.vault/1 per-object envelope', () => {
   it('opens the independent libsodium/HKDF vector and preserves exact framing', () => {
-    const derived = hkdf(sha256, vrk, aad.vaultId, new TextEncoder().encode('space/vwk/v1'), 32);
+    const derived = hkdf(sha256, vrk, aad.vaultId, new TextEncoder().encode('empty/vwk/v1'), 32);
     expect(hex(derived)).toBe(vector.vwkHex);
     const record = decodeVaultObjectRecord(artifact);
     expect(hex(record.aad)).toBe(vector.aadHex);

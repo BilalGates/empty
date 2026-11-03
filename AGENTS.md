@@ -1,6 +1,6 @@
-# Space agent map
+# Empty agent map
 
-Space is a zero-knowledge password manager. Never weaken cryptography or persist plaintext to fix a functional bug.
+Empty is a zero-knowledge password manager. Never weaken cryptography or persist plaintext to fix a functional bug.
 
 ## Sources of truth
 
@@ -13,7 +13,7 @@ Space is a zero-knowledge password manager. Never weaken cryptography or persist
 
 ## Required procedures
 
-Project Skills live in `.agents/skills/`. Load the matching Skill before changing its area. Every crypto, vault-format, recovery, WebAuthn, unlock, or secret-storage change must use `space-crypto-change-gate` and receive security plus adversarial review.
+Project Skills live in `.agents/skills/`. Load the matching Skill before changing its area. Every crypto, vault-format, recovery, WebAuthn, unlock, or secret-storage change must use `empty-crypto-change-gate` and receive security plus adversarial review.
 
 ## Commands
 

@@ -1,5 +1,5 @@
 {
-  "suite": "space.vault/1",
+  "suite": "empty.vault/1",
   "purpose": "password-slot-argon2id",
   "inputUtf8Hex": "537061636520766563746f722070617373776f72642032303236",
   "saltHex": "000102030405060708090a0b0c0d0e0f",

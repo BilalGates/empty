@@ -1,9 +1,9 @@
-# Space architecture
+# Empty architecture
 
 Status: baseline for MVP implementation  
 Last updated: 2026-09-05
 
-Space is a zero-knowledge, offline-capable password manager. The service authenticates
+Empty is a zero-knowledge, offline-capable password manager. The service authenticates
 accounts and synchronizes opaque encrypted records; it never needs plaintext vault
 content or a key capable of decrypting it.
 

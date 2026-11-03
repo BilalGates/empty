@@ -8,7 +8,7 @@ declare module "express-serve-static-core" {
 }
 
 export const hashDeviceToken = (token: string, pepper: string): Buffer => createHmac("sha256", pepper).update(token, "utf8").digest();
-export const generateDeviceToken = (): string => `space_dt_${randomBytes(32).toString("base64url")}`;
+export const generateDeviceToken = (): string => `empty_dt_${randomBytes(32).toString("base64url")}`;
 export const DEVICE_LOOKUP_SQL = `SELECT d.user_id, d.id AS device_id, d.vault_id, d.token_hash
    FROM devices d
    JOIN users u ON u.id = d.user_id

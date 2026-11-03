@@ -44,7 +44,7 @@ export function encodeKeySlotAad(input: KeySlotAad): Uint8Array {
   try {
     const value = checked(input);
     const entries: Array<[number, CborValue]> = [
-      [1, 'space.vault/1'], [2, 'key-slot'], [3, value.slotType], [4, value.vaultId], [5, value.slotId], [6, value.epoch]
+      [1, 'empty.vault/1'], [2, 'key-slot'], [3, value.slotType], [4, value.vaultId], [5, value.slotId], [6, value.epoch]
     ];
     if (value.salt) {
       entries.push([7, new Map<number, CborValue>([
@@ -60,7 +60,7 @@ export function decodeKeySlotAad(input: Uint8Array): KeySlotAad {
   try {
     if (!(input instanceof Uint8Array) || input.length > MAX_AAD_BYTES) throw new Error('INVALID_KEY_SLOT');
     const map = decodeDeterministicCbor(input);
-    if (!(map instanceof Map) || map.get(1) !== 'space.vault/1' || map.get(2) !== 'key-slot') throw new Error('INVALID_KEY_SLOT');
+    if (!(map instanceof Map) || map.get(1) !== 'empty.vault/1' || map.get(2) !== 'key-slot') throw new Error('INVALID_KEY_SLOT');
     const slotType = map.get(3);
     const size = slotType === 'password' ? 7 : slotType === 'recovery' ? 6 : 0;
     if (map.size !== size || Array.from({ length: size }, (_, index) => index + 1).some(key => !map.has(key))) {

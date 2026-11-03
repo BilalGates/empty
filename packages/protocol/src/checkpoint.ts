@@ -69,7 +69,7 @@ export function encodeCheckpoint(input: Checkpoint): Uint8Array {
   try {
     const value = checked(input);
     return encodeDeterministicCbor(new Map<number, CborValue>([
-      [1, 'space.vault/1'], [2, 'checkpoint'], [3, value.vaultId], [4, value.epoch], [5, value.heads],
+      [1, 'empty.vault/1'], [2, 'checkpoint'], [3, value.vaultId], [4, value.epoch], [5, value.heads],
       [6, value.deviceSeqs.map(entry => [entry.deviceId, entry.deviceSeq])]
     ]), MAX_CHECKPOINT_BYTES);
   } catch { throw new Error('INVALID_CHECKPOINT'); }
@@ -80,7 +80,7 @@ export function decodeCheckpoint(input: Uint8Array): Checkpoint {
     if (!(input instanceof Uint8Array) || input.length > MAX_CHECKPOINT_BYTES) throw new Error('INVALID_CHECKPOINT');
     const map = decodeDeterministicCbor(input);
     if (!(map instanceof Map) || map.size !== 6 || [1, 2, 3, 4, 5, 6].some(key => !map.has(key)) ||
-        map.get(1) !== 'space.vault/1' || map.get(2) !== 'checkpoint') throw new Error('INVALID_CHECKPOINT');
+        map.get(1) !== 'empty.vault/1' || map.get(2) !== 'checkpoint') throw new Error('INVALID_CHECKPOINT');
     const heads = map.get(5);
     const pairs = map.get(6);
     if (!Array.isArray(heads) || !Array.isArray(pairs)) throw new Error('INVALID_CHECKPOINT');

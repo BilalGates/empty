@@ -1,6 +1,6 @@
 import AuthenticationServices
 import XCTest
-import SpaceShared
+import EmptyShared
 
 final class CredentialProviderTests: XCTestCase {
     func testFilterUsesExactURLOriginAndRejectsDomainOnlyRequest() {
@@ -18,12 +18,12 @@ final class CredentialProviderTests: XCTestCase {
         )
         let service = ASCredentialServiceIdentifier(identifier: "https://example.com/account", type: .URL)
         XCTAssertEqual(
-            SpaceAutofillOriginPolicy.matching(
+            EmptyAutofillOriginPolicy.matching(
                 [expected, lookalike], services: [.init(identifier: service.identifier, kind: .url)]
             ),
             [expected]
         )
-        XCTAssertEqual(SpaceAutofillOriginPolicy.matching(
+        XCTAssertEqual(EmptyAutofillOriginPolicy.matching(
             [expected], services: [.init(identifier: "example.com", kind: .domain)]
         ), [])
     }

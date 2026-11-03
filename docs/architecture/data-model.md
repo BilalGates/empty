@@ -1,6 +1,6 @@
 # Data model
 
-Space has two related models: the encrypted logical vault owned by clients and the
+Empty has two related models: the encrypted logical vault owned by clients and the
 minimal operational model stored by the service.
 
 ## Client logical model

@@ -1,15 +1,15 @@
 {
   "manifest_version": 3,
   "minimum_chrome_version": "102",
-  "name": "Space",
+  "name": "Empty",
   "version": "0.1.0",
-  "description": "Fill credentials from Space on the page you choose.",
+  "description": "Fill credentials from Empty on the page you choose.",
   "permissions": ["activeTab", "alarms", "scripting", "storage"],
   "background": { "service_worker": "background.js", "type": "module" },
-  "action": { "default_title": "Space", "default_popup": "popup.html" },
+  "action": { "default_title": "Empty", "default_popup": "popup.html" },
   "commands": {
     "_execute_action": {
-      "suggested_key": { "default": "Ctrl+Shift+Space", "mac": "Command+Shift+Space" }
+      "suggested_key": { "default": "Ctrl+Shift+Empty", "mac": "Command+Shift+Empty" }
     }
   },
   "content_security_policy": {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { SyncMutation } from '@space/protocol';
+import type { SyncMutation } from '@empty/protocol';
 import { applyMutations, emptySyncState, pullSince, reconcile } from './index.js';
 
 const mutation = (id: string, deviceId: string, itemId: string, baseItemVersion: number, encryptedItem: string | null): SyncMutation => ({

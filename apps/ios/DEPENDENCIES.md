@@ -1,6 +1,6 @@
 # iOS cryptographic dependency record
 
-The `SpaceShared` target uses two narrowly scoped, immutable SwiftPM revisions. Do not
+The `EmptyShared` target uses two narrowly scoped, immutable SwiftPM revisions. Do not
 move either pin without the crypto change gate, regenerated cross-platform vectors,
 dependency diff review, and macOS/device evidence.
 
@@ -32,7 +32,7 @@ not the mutable tag name.
 
 This is the Password Hashing Competition reference C implementation. It is used instead
 of libsodium's password-hashing facade because that facade does not expose Argon2 lanes;
-`space.vault/1` requires `p=4`. The Swift adapter calls `argon2id_hash_raw` with exactly
+`empty.vault/1` requires `p=4`. The Swift adapter calls `argon2id_hash_raw` with exactly
 `m=65536 KiB`, `t=3`, `p=4`, a 16-byte salt, and 32-byte output. The AutoFill extension
 must never run Argon2 or lower those values; master-password derivation belongs to the
 host app.

@@ -106,7 +106,7 @@ Criterios verificables:
 
 ## M5: importación, backup y recovery probado
 
-**Objetivo:** entrar y salir de Space sin perder control.
+**Objetivo:** entrar y salir de Empty sin perder control.
 
 Incluye:
 
@@ -121,7 +121,7 @@ Criterios verificables:
 - el archivo de importación nunca se sube y el usuario puede verificarlo en prueba de red;
 - el resumen distingue creadas, duplicadas, inválidas y omitidas, con descarga local de errores sin secretos innecesarios;
 - restaurar un backup cifrado en una instalación limpia reproduce el vault esperado;
-- antes de CSV, el usuario debe confirmar que el archivo será legible y no protegido por Space.
+- antes de CSV, el usuario debe confirmar que el archivo será legible y no protegido por Empty.
 
 ## M6: factores avanzados y tipos adicionales
 
