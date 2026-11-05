@@ -22,3 +22,8 @@ artifacts/
 
 # working patches (local only)
 .patches/
+
+# iOS personal-team development build (scripts/ios-personal-device.sh)
+apps/ios/project.personal.yml
+apps/ios/EmptyPersonal.xcodeproj/
+apps/ios/Configuration/Personal/
