@@ -7,7 +7,7 @@
  *                                 ──►  .opencode/agents/<id>.md    (OpenCode)
  *                                 ──►  .codex/agents/<id>.toml     (Codex)
  *                                      (Antigravity lee la fuente directamente)
- *   .agents/skills/<skill>/       ──►  .claude/skills/<skill>/     (Claude Code)
+ *   .agents/skills/<skill>/       ──►  .claude/skills/<skill>      (Claude Code, enlace simbolico)
  *                                      (Codex, OpenCode y Antigravity leen .agents/skills)
  *
  *   node scripts/agentes/sincronizar.mjs           # escribe
@@ -15,8 +15,8 @@
  *
  * Lo generado lleva una cabecera "GENERADO" y no se edita a mano.
  */
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { basename, join, relative } from "node:path";
+import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, readlinkSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import { join, relative } from "node:path";
 
 const ROOT = process.cwd();
 const FUENTE_AGENTES = join(ROOT, ".agents/agents");
@@ -147,39 +147,28 @@ function volcar(dir, ext, generar) {
   }
 }
 
-function listarArbol(dir, base = dir) {
-  if (!existsSync(dir)) return [];
-  return readdirSync(dir).flatMap((n) => {
-    if (IGNORAR.has(n)) return [];
-    const r = join(dir, n);
-    return statSync(r).isDirectory() ? listarArbol(r, base) : [relative(base, r)];
-  });
-}
-const IGNORAR = new Set(["__pycache__", ".DS_Store"]);
-
-// Espejo skill a skill: las skills propias de `.claude/skills` no se tocan. El
-// manifiesto `.kit` recuerda cuáles copió el kit, para retirar las que ya no están.
+// Cada skill del kit es un enlace simbólico `.claude/skills/<s>` → `.agents/skills/<s>`:
+// una entrada en git en vez de una copia de cada fichero. Las skills propias de
+// `.claude/skills` no se tocan; el manifiesto `.kit` recuerda cuáles puso el kit.
+// ponytail: en Windows sin core.symlinks git deja ficheros de texto; si hay equipo en Windows, volver a copiar.
 function espejoSkills(destino) {
   const manifiesto = join(destino, ".kit");
   const skills = readdirSync(FUENTE_SKILLS).filter((n) => statSync(join(FUENTE_SKILLS, n)).isDirectory());
   const antes = existsSync(manifiesto) ? readFileSync(manifiesto, "utf8").split("\n").filter(Boolean) : [];
-  const retiradas = antes.filter((s) => !skills.includes(s) && existsSync(join(destino, s)));
+  const existe = (r) => { try { lstatSync(r); return true; } catch { return false; } };
+  const retiradas = antes.filter((s) => !skills.includes(s) && existe(join(destino, s)));
   const lista = `${skills.join("\n")}\n`;
 
+  if (!CHECK) mkdirSync(destino, { recursive: true });
   for (const skill of skills) {
-    const src = join(FUENTE_SKILLS, skill);
     const dst = join(destino, skill);
-    const fuente = new Set(listarArbol(src));
-    const dest = new Set(listarArbol(dst));
-    const iguales = (f) => readFileSync(join(src, f)).equals(readFileSync(join(dst, f)));
-    const distintos = [...fuente].filter((f) => !dest.has(f) || !iguales(f));
-    const sobran = [...dest].filter((f) => !fuente.has(f));
-    if (CHECK) {
-      desfases.push(...distintos.map((f) => relative(ROOT, join(dst, f))));
-      desfases.push(...sobran.map((f) => `${relative(ROOT, join(dst, f))} (sobra)`));
-    } else if (distintos.length || sobran.length) {
-      rmSync(dst, { recursive: true, force: true });
-      cpSync(src, dst, { recursive: true, filter: (s) => !IGNORAR.has(basename(s)) });
+    const objetivo = join("../../.agents/skills", skill);
+    const bien = existe(dst) && lstatSync(dst).isSymbolicLink() && readlinkSync(dst) === objetivo;
+    if (bien) continue;
+    if (CHECK) desfases.push(relative(ROOT, dst));
+    else {
+      rmSync(dst, { recursive: true, force: true }); // copia antigua del kit
+      symlinkSync(objetivo, dst);
     }
   }
 

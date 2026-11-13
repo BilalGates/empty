@@ -47,11 +47,16 @@ if (KIT !== process.cwd()) {
     renameSync("AGENTS.md", ".agents/proyecto.md");
     console.log("ok  tu AGENTS.md pasa a .agents/proyecto.md (manda sobre lo generico)");
   }
-  const sinBasura = (s) => basename(s) !== ".DS_Store";
+  // Skills grandes y de nicho: solo si se piden (`filigranas impeccable supabase`)
+  // o si el proyecto ya las tenía (actualizar).
+  const OPCIONALES = { impeccable: "impeccable", supabase: "supabase-postgres-best-practices" };
+  const pedidas = process.argv.slice(2).map((a) => OPCIONALES[a] ?? a);
+  const fuera = Object.values(OPCIONALES).filter((s) => !pedidas.includes(s) && !existsSync(join(".agents/skills", s)));
+  const copiar = (s) => basename(s) !== ".DS_Store" && !fuera.some((o) => s === join(KIT, ".agents/skills", o));
   for (const p of [".agents", "scripts/agentes", "AGENTS.md", ...(existsSync(".githooks") ? [] : [".githooks"])]) {
-    cpSync(join(KIT, p), p, { recursive: true, filter: sinBasura });
+    cpSync(join(KIT, p), p, { recursive: true, filter: copiar });
   }
-  console.log(`ok  kit copiado desde ${KIT}`);
+  console.log(`ok  kit copiado desde ${KIT}${fuera.length ? ` (sin opcionales: ${Object.keys(OPCIONALES).filter((k) => fuera.includes(OPCIONALES[k])).join(", ")})` : ""}`);
 }
 
 const hooksPrevios = git("config", "core.hooksPath");
