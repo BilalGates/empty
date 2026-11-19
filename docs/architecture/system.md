@@ -50,7 +50,7 @@ rest.
 - SwiftUI host app manages the vault, groups, imports, device/recovery settings and
   foreground synchronization.
 - An AutoFill Credential Provider Extension supplies identities and credentials via
-  public AuthenticationServices APIs. Space never reads Apple Passwords' private
+  public AuthenticationServices APIs. Empty never reads Apple Passwords' private
   storage. See Apple's [AuthenticationServices documentation](https://developer.apple.com/documentation/authenticationservices).
 - Keychain and LocalAuthentication protect a locally wrapped unlock key; biometrics
   authorize its use and do not replace the master-password key hierarchy. See Apple's
@@ -102,7 +102,7 @@ change the ciphertext item format.
 6. The content script writes only requested fields and clears its references.
 
 Passwords are not sent in discovery messages, telemetry or HTML attributes. A page
-can always observe values filled into its own fields; Space does not claim otherwise.
+can always observe values filled into its own fields; Empty does not claim otherwise.
 
 ## Availability and degradation
 

@@ -1,4 +1,4 @@
-# Modelo de amenazas de Space
+# Modelo de amenazas de Empty
 
 Estado: diseño normativo previo a V1  
 Última revisión: 2026-09-05  
@@ -6,7 +6,7 @@ Propietario: Security; todo cambio criptográfico exige el gate de `security-rev
 
 ## Objetivo y promesa
 
-Space protege la confidencialidad e integridad de un vault frente al robo de la base de datos, un API comprometido y un administrador malicioso. El servidor sincroniza ciphertext y metadatos mínimos: no recibe la contraseña maestra, la Vault Root Key (VRK), claves de datos ni secretos descifrados.
+Empty protege la confidencialidad e integridad de un vault frente al robo de la base de datos, un API comprometido y un administrador malicioso. El servidor sincroniza ciphertext y metadatos mínimos: no recibe la contraseña maestra, la Vault Root Key (VRK), claves de datos ni secretos descifrados.
 
 “Zero knowledge” no significa invisibilidad total: el servicio conoce identificadores de cuenta/dispositivo, tamaños aproximados, tiempos, IP y patrón de sincronización. Una copia del servidor permite probar contraseñas maestras **offline** contra el slot de contraseña; Argon2id aumenta el coste, pero no convierte una contraseña débil en una clave fuerte.
 

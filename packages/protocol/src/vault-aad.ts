@@ -23,7 +23,7 @@ function positive(value: number): number {
 export function encodeVaultObjectAad(aad: VaultObjectAad): Uint8Array {
   if (!['password', 'passkey', 'totp', 'secure-item', 'tombstone'].includes(aad.objectType)) throw new Error('INVALID_AAD');
   const encoded = encodeDeterministicCbor(new Map<number, CborValue>([
-    [1, 'space.vault/1'],
+    [1, 'empty.vault/1'],
     [2, 'vault-object'],
     [3, id(aad.vaultId)],
     [4, id(aad.objectId)],
@@ -41,7 +41,7 @@ export function decodeVaultObjectAad(bytes: Uint8Array): VaultObjectAad {
   try {
     if (bytes.length > 16 * 1024) throw new Error('INVALID_AAD');
     const value = decodeDeterministicCbor(bytes);
-    if (!(value instanceof Map) || value.size !== 9 || value.get(1) !== 'space.vault/1' || value.get(2) !== 'vault-object') {
+    if (!(value instanceof Map) || value.size !== 9 || value.get(1) !== 'empty.vault/1' || value.get(2) !== 'vault-object') {
       throw new Error('INVALID_AAD');
     }
     const objectType = value.get(5);

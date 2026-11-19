@@ -31,8 +31,8 @@ El detalle aparece en panel adyacente cuando hay anchura suficiente y como naveg
 
 Oculta por completo credenciales, búsquedas recientes y previews. Muestra:
 
-- `Space está bloqueado`;
-- método disponible y acción `Desbloquear Space`;
+- `Empty está bloqueado`;
+- método disponible y acción `Desbloquear Empty`;
 - acceso secundario a recovery cuando corresponde;
 - motivo específico si hubo timeout, reinicio o revocación.
 

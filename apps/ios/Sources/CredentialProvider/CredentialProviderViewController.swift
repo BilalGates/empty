@@ -1,5 +1,5 @@
 import AuthenticationServices
-import SpaceShared
+import EmptyShared
 import UIKit
 
 final class CredentialProviderViewController: ASCredentialProviderViewController {
@@ -11,12 +11,12 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
     ) {
         Task { @MainActor in
             do {
-                let store = try store ?? SpaceEnvironment.makeStore()
+                let store = try store ?? EmptyEnvironment.makeStore()
                 let snapshot = try await store.load(
                     interaction: .allowed(reason: "Unlock credentials for AutoFill")
                 )
                 self.store = store
-                credentials = SpaceAutofillOriginPolicy.matching(
+                credentials = EmptyAutofillOriginPolicy.matching(
                     snapshot.credentials,
                     services: serviceIdentifiers.compactMap(Self.service)
                 )
@@ -39,9 +39,9 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
         }
         Task { @MainActor in
             do {
-                let store = try store ?? SpaceEnvironment.makeStore()
+                let store = try store ?? EmptyEnvironment.makeStore()
                 let snapshot = try await store.load(interaction: .forbidden)
-                guard let credential = SpaceAutofillOriginPolicy.selectedCredential(
+                guard let credential = EmptyAutofillOriginPolicy.selectedCredential(
                     id: recordID, in: snapshot.credentials, service: service
                 ) else {
                     cancel(code: .credentialIdentityNotFound)
@@ -66,11 +66,11 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
         }
         Task { @MainActor in
             do {
-                let store = try store ?? SpaceEnvironment.makeStore()
+                let store = try store ?? EmptyEnvironment.makeStore()
                 let snapshot = try await store.load(
                     interaction: .allowed(reason: "Unlock the selected credential")
                 )
-                guard let credential = SpaceAutofillOriginPolicy.selectedCredential(
+                guard let credential = EmptyAutofillOriginPolicy.selectedCredential(
                     id: recordID, in: snapshot.credentials, service: service
                 ) else {
                     cancel(code: .credentialIdentityNotFound)
@@ -118,13 +118,13 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
         return UUID(uuidString: identifier)
     }
 
-    private static func service(from request: any ASCredentialRequest) -> SpaceAutofillOriginPolicy.Service? {
+    private static func service(from request: any ASCredentialRequest) -> EmptyAutofillOriginPolicy.Service? {
         guard let request = request as? ASPasswordCredentialRequest else { return nil }
         return service(request.credentialIdentity.serviceIdentifier)
     }
 
-    private static func service(_ identifier: ASCredentialServiceIdentifier) -> SpaceAutofillOriginPolicy.Service? {
-        let kind: SpaceAutofillOriginPolicy.ServiceKind
+    private static func service(_ identifier: ASCredentialServiceIdentifier) -> EmptyAutofillOriginPolicy.Service? {
+        let kind: EmptyAutofillOriginPolicy.ServiceKind
         switch identifier.type {
         case .URL: kind = .url
         case .domain: kind = .domain
@@ -148,7 +148,7 @@ private final class CredentialListViewController: UITableViewController {
         self.credentials = credentials
         self.selection = selection
         super.init(style: .insetGrouped)
-        title = "Space"
+        title = "Empty"
     }
 
     @available(*, unavailable)

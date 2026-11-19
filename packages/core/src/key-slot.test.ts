@@ -5,7 +5,7 @@ import { sha256 } from '@noble/hashes/sha2';
 import {
   decodeDeterministicCbor, decodeKeySlotAad, decodeKeySlotRecord, encodeDeterministicCbor, encodeKeySlotAad,
   encodeKeySlotRecord, type CborValue
-} from '@space/protocol';
+} from '@empty/protocol';
 import { describe, expect, it } from 'vitest';
 import {
   decodeRecoveryKey, encodeRecoveryKey, generateRecoverySecret, normalizeMasterPassword, openPasswordSlot,
@@ -36,11 +36,11 @@ describe('V1 key slots', () => {
   it('reproduce the independent Python AAD, KEK, ciphertext and artifact bytes', () => {
     const passwordAad = encodeKeySlotAad({ slotType: 'password', ...passwordContext, salt: bytes(vector.password.saltHex) });
     expect(hex(passwordAad)).toBe(vector.password.aadHex);
-    const passwordKek = hkdf(sha256, bytes(vector.password.argonOutputHex), vaultId, info('space/password-kek/v1', vector.password.slotIdHex), 32);
+    const passwordKek = hkdf(sha256, bytes(vector.password.argonOutputHex), vaultId, info('empty/password-kek/v1', vector.password.slotIdHex), 32);
     expect(hex(passwordKek)).toBe(vector.password.kekHex);
     const recoveryAad = encodeKeySlotAad({ slotType: 'recovery', ...recoveryContext });
     expect(hex(recoveryAad)).toBe(vector.recovery.aadHex);
-    const recoveryKek = hkdf(sha256, bytes(vector.recovery.secretHex), vaultId, info('space/recovery-kek/v1', vector.recovery.slotIdHex), 32);
+    const recoveryKek = hkdf(sha256, bytes(vector.recovery.secretHex), vaultId, info('empty/recovery-kek/v1', vector.recovery.slotIdHex), 32);
     expect(hex(recoveryKek)).toBe(vector.recovery.kekHex);
     for (const [slot, aad, kek] of [[vector.password, passwordAad, passwordKek], [vector.recovery, recoveryAad, recoveryKek]] as const) {
       const ciphertext = xchacha20poly1305(kek, bytes(slot.nonceHex), aad).encrypt(vrk);

@@ -52,7 +52,7 @@ export function encodeOperationHeader(input: OperationHeader): Uint8Array {
   try {
     const value = checked(input);
     return encodeDeterministicCbor(new Map<number, CborValue>([
-      [1, 'space.vault/1'], [2, 'operation'], [3, value.vaultId], [4, value.epoch],
+      [1, 'empty.vault/1'], [2, 'operation'], [3, value.vaultId], [4, value.epoch],
       [5, value.opId], [6, value.deviceId], [7, value.deviceSeq], [8, value.parentHeads],
       [9, value.objectId], [10, value.objectVersion], [11, value.ciphertextHash]
     ]), MAX_HEADER_BYTES);
@@ -65,7 +65,7 @@ export function decodeOperationHeader(input: Uint8Array): OperationHeader {
     const map = decodeDeterministicCbor(input);
     if (!(map instanceof Map) || map.size !== 11 ||
         Array.from({ length: 11 }, (_, index) => index + 1).some((key) => !map.has(key)) ||
-        map.get(1) !== 'space.vault/1' || map.get(2) !== 'operation') throw new Error('INVALID_OPERATION_HEADER');
+        map.get(1) !== 'empty.vault/1' || map.get(2) !== 'operation') throw new Error('INVALID_OPERATION_HEADER');
     const parents = map.get(8);
     if (!Array.isArray(parents)) throw new Error('INVALID_OPERATION_HEADER');
     return checked({

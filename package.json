@@ -1,5 +1,5 @@
 {
-  "name": "space-password-manager",
+  "name": "empty-password-manager",
   "version": "0.1.0",
   "private": true,
   "description": "A zero-knowledge personal password manager",
@@ -12,13 +12,13 @@
   },
   "scripts": {
     "build": "npm run build --workspaces --if-present",
-    "test": "vitest run --maxWorkers=1 --exclude \"apps/extension/test/**\" && npm test --workspace @space/extension",
+    "test": "vitest run --maxWorkers=1 --exclude \"apps/extension/test/**\" && npm test --workspace @empty/extension",
     "test:coverage": "vitest run --coverage",
-    "test:chrome:e2e": "npm run build --workspace @space/extension && node tests/chrome-extension-e2e.mjs",
+    "test:chrome:e2e": "npm run build --workspace @empty/extension && node tests/chrome-extension-e2e.mjs",
     "lint": "eslint .",
     "typecheck": "tsc -b",
     "check": "npm run lint && npm run typecheck && npm test && npm run build",
-    "release:extension": "npm run build --workspace @space/extension && node scripts/package-extension.mjs",
+    "release:extension": "npm run build --workspace @empty/extension && node scripts/package-extension.mjs",
     "security:secrets": "node scripts/secret-scan.mjs",
     "security:permissions": "node scripts/check-extension-permissions.mjs"
   },

@@ -4,7 +4,7 @@ import { sha256 } from '@noble/hashes/sha2';
 import {
   decodeCheckpoint, decodeDeterministicCbor, decodeSealedCheckpointRecord, encodeCheckpoint, encodeDeterministicCbor,
   encodeSealedCheckpointRecord, type CborValue, type Checkpoint
-} from '@space/protocol';
+} from '@empty/protocol';
 import { describe, expect, it } from 'vitest';
 import { checkpointCannotBeRollback, openCheckpoint, sealCheckpoint } from './checkpoint.js';
 
@@ -26,7 +26,7 @@ const id = (byte: number): Uint8Array => new Uint8Array(16).fill(byte);
 
 describe('V1 sealed checkpoint', () => {
   it('matches the independent Python HKDF/HMAC artifact byte for byte', () => {
-    expect(hex(hkdf(sha256, vrk, vaultId, new TextEncoder().encode('space/checkpoint/v1'), 32))).toBe(vector.checkpointKeyHex);
+    expect(hex(hkdf(sha256, vrk, vaultId, new TextEncoder().encode('empty/checkpoint/v1'), 32))).toBe(vector.checkpointKeyHex);
     expect(hex(encodeCheckpoint(checkpoint))).toBe(vector.checkpointHex);
     expect(hex(sealCheckpoint(vrk, checkpoint))).toBe(vector.artifactHex);
     expect(openCheckpoint(vrk, vaultId, artifact)).toEqual(checkpoint);

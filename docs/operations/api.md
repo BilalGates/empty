@@ -1,4 +1,4 @@
-# Space API operations
+# Empty API operations
 
 The API stores only opaque encrypted envelopes and their synchronization metadata. Unlocking and key derivation stay on the client. Device bearer tokens authenticate the service session but never unlock a vault.
 
@@ -33,6 +33,6 @@ The current API is a linear `baseItemVersion` synchronization slice. It preserve
 
 Back up PostgreSQL using encrypted, access-controlled storage. A logical backup contains ciphertext and metadata, not vault plaintext, but it remains sensitive. Keep backup credentials outside the database and test restores regularly in an isolated environment.
 
-Example backup: `pg_dump --format=custom --no-owner --dbname="$DATABASE_URL" --file=space.dump`. Restore into an empty database with `pg_restore --clean --if-exists --no-owner`. After restore, verify the migration table, `/health/ready`, incremental pull from a known cursor, and device revocation. Never inspect or log envelope columns during validation.
+Example backup: `pg_dump --format=custom --no-owner --dbname="$DATABASE_URL" --file=empty.dump`. Restore into an empty database with `pg_restore --clean --if-exists --no-owner`. After restore, verify the migration table, `/health/ready`, incremental pull from a known cursor, and device revocation. Never inspect or log envelope columns during validation.
 
 Retention and deletion must cover primary data, replicas, snapshots and backup expiry. PostgreSQL point-in-time recovery is recommended; record and rehearse the selected RPO/RTO before production launch.

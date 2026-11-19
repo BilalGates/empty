@@ -30,7 +30,7 @@ button:disabled { opacity: .55; cursor: default; }
 details { margin-top: 18px; border-top: 1px solid color-mix(in srgb, CanvasText 14%, transparent); padding-top: 13px; }
 summary { display: flex; min-height: 40px; align-items: center; cursor: pointer; color: GrayText; }
 .generator-row { display: flex; align-items: center; gap: 8px; margin: 12px 0 8px; }
-output { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: ui-monospace, monospace; }
+output { flex: 1; overflow: hidden; text-overflow: ellipsis; white-empty: nowrap; font-family: ui-monospace, monospace; }
 #fill-generated { width: 100%; }
 form { display: grid; gap: 12px; margin-top: 14px; }
 label { display: grid; gap: 5px; color: GrayText; font-size: 13px; }

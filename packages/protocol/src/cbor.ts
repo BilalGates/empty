@@ -1,4 +1,4 @@
-// The narrow CBOR subset used for signed Space headers and authenticated data.
+// The narrow CBOR subset used for signed Empty headers and authenticated data.
 // Maps have unsigned integer keys; floats, tags and indefinite lengths are forbidden.
 export type CborValue = null | boolean | number | string | Uint8Array | CborValue[] | Map<number, CborValue>;
 

@@ -6,7 +6,7 @@
 
 ## Context
 
-Space needs consistent protocol, cryptography and sync behavior in a Chrome extension,
+Empty needs consistent protocol, cryptography and sync behavior in a Chrome extension,
 backend tooling and native iOS app. A shared Rust library compiled to WASM and bridged
 to Swift could reduce implementation divergence, but it also adds two foreign-function
 boundaries, WASM packaging/CSP review, memory-copy/zeroization caveats, cross-compiling,

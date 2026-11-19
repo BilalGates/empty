@@ -7,7 +7,7 @@ import { Pool } from 'pg';
 import { z } from 'zod';
 
 const defaultDist = fileURLToPath(new URL('../apps/api/dist/', import.meta.url));
-const dist = process.env.SPACE_API_DIST_DIR ?? defaultDist;
+const dist = process.env.EMPTY_API_DIST_DIR ?? defaultDist;
 const { createApp } = await import(pathToFileURL(resolve(dist, 'app.js')).href);
 const { hashDeviceToken } = await import(pathToFileURL(resolve(dist, 'auth.js')).href);
 const { createLogger } = await import(pathToFileURL(resolve(dist, 'logger.js')).href);
@@ -15,7 +15,7 @@ const { createLogger } = await import(pathToFileURL(resolve(dist, 'logger.js')).
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error('DATABASE_URL is required');
 const pepper = 'integration-only-device-token-pepper';
-const token = `space_dt_${'a'.repeat(43)}`;
+const token = `empty_dt_${'a'.repeat(43)}`;
 const ids = { user: randomUUID(), vault: randomUUID(), device: randomUUID(), item: randomUUID() };
 const pool = new Pool({ connectionString: databaseUrl });
 let server;

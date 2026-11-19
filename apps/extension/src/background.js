@@ -1,6 +1,6 @@
 import { isAutofillAllowed, normalizeOrigin, originsMatch } from "./origin.js";
 import { isMessage } from "./protocol.js";
-import { createEncryptedVault, importChromeCsv, openEncryptedVaultWithSessionKey, unlockVaultSessionWithPassword, unlockVaultSessionWithRecoveryKey, unlockWithPassword, updateEncryptedVaultWithSessionKey } from "@space/core";
+import { createEncryptedVault, importChromeCsv, openEncryptedVaultWithSessionKey, unlockVaultSessionWithPassword, unlockVaultSessionWithRecoveryKey, unlockWithPassword, updateEncryptedVaultWithSessionKey } from "@empty/core";
 
 const SESSION_TTL_MS = 5 * 60_000;
 const STORAGE_KEY = "encryptedVault";
@@ -125,20 +125,20 @@ async function persistDocument(document) {
 
 async function ensureContent(tabId) {
   try {
-    return await chrome.tabs.sendMessage(tabId, { type: "SPACE_CONTENT_SCAN" });
+    return await chrome.tabs.sendMessage(tabId, { type: "EMPTY_CONTENT_SCAN" });
   } catch {
     await chrome.scripting.executeScript({ target: { tabId, allFrames: false }, files: ["content.js"] });
-    return chrome.tabs.sendMessage(tabId, { type: "SPACE_CONTENT_SCAN" });
+    return chrome.tabs.sendMessage(tabId, { type: "EMPTY_CONTENT_SCAN" });
   }
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message?.type === "SPACE_FORM_STATE" && sender.tab && normalizeOrigin(message.origin)) {
+  if (message?.type === "EMPTY_FORM_STATE" && sender.tab && normalizeOrigin(message.origin)) {
     formStates.set(sender.tab.id, { kind: message.kind, usernameCount: message.usernameCount, passwordCount: message.passwordCount });
     return false;
   }
   if (!isMessage(message) || !extensionSender(sender)) return false;
-  if (message.type === "SPACE_LOCK") {
+  if (message.type === "EMPTY_LOCK") {
     const operation = expireSession();
     sessionInvalidation = operation.then(() => undefined, () => undefined);
     void operation.then(() => sendResponse({ ok: true }), () => sendResponse({ ok: false, error: "internal" }));
@@ -154,11 +154,11 @@ async function handle(message) {
   await restrictSessionAccess;
   await sessionInvalidation;
   await restoreSession();
-  if (message.type === "SPACE_LOCK") {
+  if (message.type === "EMPTY_LOCK") {
     await expireSession();
     return { ok: true };
   }
-  if (message.type === "SPACE_CREATE_VAULT") {
+  if (message.type === "EMPTY_CREATE_VAULT") {
     if (await readStoredVault()) return { ok: false, error: "vault-exists" };
     const now = new Date().toISOString();
     const document = { formatVersion: 1, vaultId: crypto.randomUUID(), revision: 0, createdAt: now, updatedAt: now, groups: [], items: [] };
@@ -168,7 +168,7 @@ async function handle(message) {
     await openSession(unlocked.document, unlocked.vaultKey);
     return { ok: true, recoveryKey: created.recoveryKey };
   }
-  if (message.type === "SPACE_UNLOCK") {
+  if (message.type === "EMPTY_UNLOCK") {
     const vault = await readStoredVault();
     if (!vault) return { ok: false, error: "vault-missing" };
     try {
@@ -182,13 +182,13 @@ async function handle(message) {
   if (!isAutofillAllowed(message.origin)) return { ok: false, state: "blocked", reason: "unsafe-origin" };
   const tab = await chrome.tabs.get(message.tabId);
   if (!tab.url || !originsMatch(tab.url, message.origin)) return { ok: false, state: "blocked", reason: "origin-mismatch" };
-  if (message.type === "SPACE_GET_STATE") {
+  if (message.type === "EMPTY_GET_STATE") {
     const form = await ensureContent(message.tabId).catch(() => ({ kind: "none", usernameCount: 0, passwordCount: 0 }));
     const credentials = publicCredentials(message.origin);
     if (credentials === null) return { ok: true, state: "locked", hasVault: Boolean(await readStoredVault()), form };
     return { ok: true, state: credentials.length ? "populated" : "empty", credentials, allCredentials: publicIndex(), form };
   }
-  if (message.type === "SPACE_GET_SECRET") {
+  if (message.type === "EMPTY_GET_SECRET") {
     const index = publicIndex();
     const activeSession = session;
     const selected = index && activeSession.credentials.find((item) => item.id === message.credentialId);
@@ -197,7 +197,7 @@ async function handle(message) {
     if (session !== activeSession || sessionGeneration !== activeSession.generation || !sessionIsActive(activeSession)) return { ok: false, error: "locked" };
     return { ok: true, username: selected.username, password: selected.password };
   }
-  if (message.type === "SPACE_PREVIEW_IMPORT") {
+  if (message.type === "EMPTY_PREVIEW_IMPORT") {
     clearPendingImport();
     const index = publicIndex();
     if (!index) return { ok: false, error: "locked" };
@@ -220,7 +220,7 @@ async function handle(message) {
       return { ok: true, token: pendingImport.token, accepted: accepted.length, duplicates: parsed.duplicates.length + existingDuplicates, issues: parsed.issues.slice(0, 100), issueCount: parsed.issues.length + unsafe };
     } catch { clearPendingImport(); return { ok: false, error: "invalid-import" }; }
   }
-  if (message.type === "SPACE_COMMIT_IMPORT") {
+  if (message.type === "EMPTY_COMMIT_IMPORT") {
     if (!session || !pendingImport || pendingImport.token !== message.token || performance.now() >= pendingImport.expiresAt) { clearPendingImport(); return { ok: false, error: "import-expired" }; }
     const now = new Date().toISOString();
     const imported = pendingImport.accepted.map((item) => ({ id: crypto.randomUUID(), kind: "password", title: item.title, origins: [normalizeOrigin(item.url)], username: item.username, password: item.password, ...(item.note ? { notes: item.note } : {}), favorite: false, createdAt: now, updatedAt: now, version: 1 }));
@@ -229,8 +229,8 @@ async function handle(message) {
     clearPendingImport();
     return { ok: true, imported: imported.length };
   }
-  if (message.type === "SPACE_SCAN") return { ok: true, ...(await ensureContent(message.tabId)) };
-  if (message.type === "SPACE_ADD_CREDENTIAL") {
+  if (message.type === "EMPTY_SCAN") return { ok: true, ...(await ensureContent(message.tabId)) };
+  if (message.type === "EMPTY_ADD_CREDENTIAL") {
     if (!sessionIsActive()) { session = null; return { ok: false, error: "locked" }; }
     const now = new Date().toISOString();
     const item = { id: crypto.randomUUID(), kind: "password", title: message.title, origins: [normalizeOrigin(message.origin)], username: message.username, password: message.password, favorite: false, createdAt: now, updatedAt: now, version: 1 };
@@ -238,7 +238,7 @@ async function handle(message) {
     if (!await persistDocument(document)) return { ok: false, error: "vault-missing" };
     return { ok: true, credentialId: item.id };
   }
-  if (message.type === "SPACE_UPDATE_CREDENTIAL") {
+  if (message.type === "EMPTY_UPDATE_CREDENTIAL") {
     if (!session) return { ok: false, error: "locked" };
     if (!message.title.trim()) return { ok: false, error: "invalid-credential" };
     const website = normalizeOrigin(message.website);
@@ -253,7 +253,7 @@ async function handle(message) {
     if (!await persistDocument(document)) return { ok: false, error: "vault-missing" };
     return { ok: true };
   }
-  if (message.type === "SPACE_DELETE_CREDENTIAL") {
+  if (message.type === "EMPTY_DELETE_CREDENTIAL") {
     if (!session) return { ok: false, error: "locked" };
     const index = session.document.items.findIndex((item) => item.id === message.credentialId && item.kind === "password" && !item.deletedAt);
     if (index < 0) return { ok: false, error: "credential-unavailable" };
@@ -265,7 +265,7 @@ async function handle(message) {
     if (!await persistDocument(document)) return { ok: false, error: "vault-missing" };
     return { ok: true };
   }
-  if (message.type === "SPACE_EXPORT_BACKUP") {
+  if (message.type === "EMPTY_EXPORT_BACKUP") {
     const vault = await readStoredVault();
     if (!vault) return { ok: false, error: "vault-missing" };
     try {
@@ -273,10 +273,10 @@ async function handle(message) {
       const activeSession = session;
       await touchSession();
       if (session !== activeSession || !activeSession || sessionGeneration !== activeSession.generation || !sessionIsActive(activeSession)) return { ok: false, error: "locked" };
-      return { ok: true, filename: "space-backup.json", content: JSON.stringify(vault) };
+      return { ok: true, filename: "empty-backup.json", content: JSON.stringify(vault) };
     } catch { return { ok: false, error: "invalid-credentials" }; }
   }
-  if (message.type === "SPACE_RESTORE_BACKUP") {
+  if (message.type === "EMPTY_RESTORE_BACKUP") {
     const existingVault = await readStoredVault();
     if (existingVault && !message.replaceConfirmed) return { ok: false, error: "confirmation-required" };
     const restoreGeneration = sessionGeneration;
@@ -297,9 +297,9 @@ async function handle(message) {
       return { ok: false, error: "invalid-backup" };
     }
   }
-  if (message.type === "SPACE_FILL_GENERATED") {
+  if (message.type === "EMPTY_FILL_GENERATED") {
     await ensureContent(message.tabId);
-    return chrome.tabs.sendMessage(message.tabId, { type: "SPACE_CONTENT_FILL", requestId: crypto.randomUUID(),
+    return chrome.tabs.sendMessage(message.tabId, { type: "EMPTY_CONTENT_FILL", requestId: crypto.randomUUID(),
       origin: message.origin, credential: { username: "", password: message.password } });
   }
   const credentials = publicCredentials(message.origin);
@@ -312,7 +312,7 @@ async function handle(message) {
     await expireSession();
     return { ok: false, error: "locked" };
   }
-  const response = await chrome.tabs.sendMessage(message.tabId, { type: "SPACE_CONTENT_FILL", requestId: crypto.randomUUID(),
+  const response = await chrome.tabs.sendMessage(message.tabId, { type: "EMPTY_CONTENT_FILL", requestId: crypto.randomUUID(),
     origin: message.origin, credential: { username: selected.username, password: selected.password } });
   if (response?.ok) await touchSession();
   return response;

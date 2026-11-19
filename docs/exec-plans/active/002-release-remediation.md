@@ -18,11 +18,11 @@ Status: implementation remediations complete; external release gates remain.
 - Set `Cache-Control: no-store` on sensitive API success and error responses.
 - Omit undefined PostgreSQL SSL configuration under strict TypeScript.
 - Align iOS plaintext and envelope size limits and remove the LocalAuthentication compatibility shim.
-- Correct release scripts from `apps/chrome` to `apps/extension` and generate the Xcode project before using `Space.xcodeproj`.
+- Correct release scripts from `apps/chrome` to `apps/extension` and generate the Xcode project before using `Empty.xcodeproj`.
 
 ## Resume gate
 
-After filesystem execution is restored: initialize Git on `feat/space-foundation`, install and lock dependencies, run `npm run check`, security scripts, PostgreSQL integration tests, deterministic extension packaging, Docker build/health, loaded Chrome E2E, and macOS iOS build. Re-run independent Security and QA reviews. No real secrets may be stored before all High findings are closed and evidence is recorded.
+After filesystem execution is restored: initialize Git on `feat/empty-foundation`, install and lock dependencies, run `npm run check`, security scripts, PostgreSQL integration tests, deterministic extension packaging, Docker build/health, loaded Chrome E2E, and macOS iOS build. Re-run independent Security and QA reviews. No real secrets may be stored before all High findings are closed and evidence is recorded.
 
 ## Evidence recorded 2026-09-06
 

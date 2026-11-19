@@ -1,33 +1,33 @@
-# Space for iOS
+# Empty for iOS
 
 This directory is an XcodeGen source project for the SwiftUI host app and its AutoFill
-Credential Provider extension. Generate `Space.xcodeproj` on macOS with:
+Credential Provider extension. Generate `Empty.xcodeproj` on macOS with:
 
 ```sh
 brew install xcodegen
 cd apps/ios
 xcodegen generate
-xcodebuild -project Space.xcodeproj -scheme Space \
+xcodebuild -project Empty.xcodeproj -scheme Empty \
   -destination 'platform=iOS Simulator,name=iPhone 16' test
 ```
 
-The local cache format `space.ios.local-cache/1` is intentionally not the interoperable
-`space.vault/1` protocol. It uses CryptoKit AES-GCM solely as a representative encrypted
-App Group cache. `SpaceVaultPrimitiveSuite` now validates the normative Argon2id,
+The local cache format `empty.ios.local-cache/1` is intentionally not the interoperable
+`empty.vault/1` protocol. It uses CryptoKit AES-GCM solely as a representative encrypted
+App Group cache. `EmptyVaultPrimitiveSuite` now validates the normative Argon2id,
 HKDF-SHA-256, and XChaCha20-Poly1305-IETF primitives against vectors, using the immutable
 dependencies recorded in `DEPENDENCIES.md`. It remains disconnected from persistence
 until deterministic CBOR/AAD, per-object envelopes, signatures, and checkpoints have
 their complete shared vector corpus. Do not sync the local cache file or treat it as a
 V1 wire artifact.
 
-`SpaceVaultObjectEnvelope` now reads the isolated `space.vault/1` object frame,
+`EmptyVaultObjectEnvelope` now reads the isolated `empty.vault/1` object frame,
 compares the caller's expected AAD, verifies both AEAD tags, and validates
 deterministic CBOR before returning payload bytes. Its password writer validates
 typed CBOR and generates a fresh DEK and nonces for each object version. These
 helpers are not connected to app storage, sync, or AutoFill. Signed operation
 context and migration are required before activation.
 
-`SpaceOperationHeader` encodes and decodes the isolated V1 bytes that a device will
+`EmptyOperationHeader` encodes and decodes the isolated V1 bytes that a device will
 sign. It fixes bounded fields and sorted parent operation IDs. It does not verify a
 signature, authorize a device, or apply a remote operation.
 
@@ -40,7 +40,7 @@ also bind the selected identity's URL to the saved record. AuthenticationService
 not expose a full requesting URL in those direct requests, so physical-device AutoFill
 verification remains required before connecting V1 credentials.
 
-`SpaceSyncClient` now implements authenticated `/v1/session`, fail-closed
+`EmptySyncClient` now implements authenticated `/v1/session`, fail-closed
 `/v1/bootstrap/bind`, and canonical
 `/v1/vaults/{vaultId}/sync/{push,pull}` transport. Its device credential is stored by
 `KeychainDeviceSessionStore` as a this-device-only Keychain item, and remote endpoints

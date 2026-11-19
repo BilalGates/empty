@@ -1,5 +1,5 @@
 {
-  "name": "@space/core",
+  "name": "@empty/core",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -9,7 +9,7 @@
     "@noble/ciphers": "1.3.0",
     "@noble/curves": "1.9.7",
     "@noble/hashes": "1.8.0",
-    "@space/protocol": "0.1.0"
+    "@empty/protocol": "0.1.0"
   },
   "scripts": { "build": "tsc -b", "test": "vitest run" }
 }

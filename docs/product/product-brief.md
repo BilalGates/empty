@@ -1,12 +1,12 @@
-# Space: definición de producto
+# Empty: definición de producto
 
 ## Propósito
 
-Space es un gestor de credenciales personal y zero-knowledge para Chrome y iPhone. Permite guardar, encontrar, rellenar, actualizar y recuperar credenciales sin que el servicio pueda leer el vault.
+Empty es un gestor de credenciales personal y zero-knowledge para Chrome y iPhone. Permite guardar, encontrar, rellenar, actualizar y recuperar credenciales sin que el servicio pueda leer el vault.
 
 El producto separa dos conceptos que la interfaz debe explicar con precisión:
 
-- **Acceder a Space** autentica la cuenta y el dispositivo frente al servicio.
+- **Acceder a Empty** autentica la cuenta y el dispositivo frente al servicio.
 - **Desbloquear el vault** obtiene localmente la clave necesaria para descifrar los datos.
 
 La experiencia no promete eliminar decisiones de seguridad. Las reduce, las ordena y explica sus consecuencias en el momento adecuado.
@@ -31,7 +31,7 @@ Una persona que usa passkeys, TOTP o YubiKey, exige exportación, recuperación 
 
 ## Promesa de experiencia
 
-Space se siente tranquilo, directo y privado. La interfaz desaparece detrás de las credenciales. No parece un panel de administración, una terminal ni un producto SaaS de analítica.
+Empty se siente tranquilo, directo y privado. La interfaz desaparece detrás de las credenciales. No parece un panel de administración, una terminal ni un producto SaaS de analítica.
 
 ## Principios
 

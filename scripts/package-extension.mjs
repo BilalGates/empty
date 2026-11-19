@@ -6,7 +6,7 @@ import { ZipFile } from 'yazl';
 
 const source = resolve('apps/extension/dist');
 const artifacts = resolve('artifacts');
-const output = join(artifacts, 'space-chrome.zip');
+const output = join(artifacts, 'empty-chrome.zip');
 const epochSeconds = Number(process.env.SOURCE_DATE_EPOCH ?? 946_684_800);
 if (!Number.isSafeInteger(epochSeconds) || epochSeconds < 315_532_800) throw new Error('SOURCE_DATE_EPOCH must be a ZIP-compatible Unix timestamp');
 const mtime = new Date(epochSeconds * 1000);

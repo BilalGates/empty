@@ -5,10 +5,10 @@ import {
   decodeDeterministicCbor, decodePasswordPayload, decodeVaultObjectRecord, encodeDeterministicCbor,
   encodeVaultObjectAad, encodeVaultObjectRecord, MAX_OBJECT_PLAINTEXT_BYTES,
   type CborValue, type PasswordPayload, type VaultObjectAad
-} from '@space/protocol';
+} from '@empty/protocol';
 import { wipe } from './encoding.js';
 
-const VWK_INFO = new TextEncoder().encode('space/vwk/v1');
+const VWK_INFO = new TextEncoder().encode('empty/vwk/v1');
 const DEK_SUFFIX = new TextEncoder().encode('\0dek');
 const PAYLOAD_SUFFIX = new TextEncoder().encode('\0payload');
 

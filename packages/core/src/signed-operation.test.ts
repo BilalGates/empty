@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { ed25519 } from '@noble/curves/ed25519';
 import {
   decodeOperationHeader, decodeSignedOperationRecord, encodeSignedOperationRecord, type VaultObjectAad
-} from '@space/protocol';
+} from '@empty/protocol';
 import { describe, expect, it } from 'vitest';
 import { signOperation, verifyOperation } from './signed-operation.js';
 

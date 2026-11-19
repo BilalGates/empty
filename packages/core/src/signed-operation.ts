@@ -4,7 +4,7 @@ import {
   decodeOperationHeader, decodeSignedOperationRecord, decodeVaultObjectAad, decodeVaultObjectRecord,
   encodeOperationHeader, encodeSignedOperationRecord, encodeVaultObjectAad,
   type OperationHeader, type VaultObjectAad
-} from '@space/protocol';
+} from '@empty/protocol';
 
 /** RFC 8032 strict verification: canonical encodings only, no ZIP-215 relaxation. */
 const VERIFY_OPTIONS = { zip215: false } as const;

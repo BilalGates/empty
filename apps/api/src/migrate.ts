@@ -10,7 +10,7 @@ const config = loadConfig();
 const pool = createPool(config.DATABASE_URL, config.DATABASE_SSL_MODE);
 
 try {
-  await pool.query("SELECT pg_advisory_lock(hashtext('space_schema_migrations'))");
+  await pool.query("SELECT pg_advisory_lock(hashtext('empty_schema_migrations'))");
   await pool.query("CREATE TABLE IF NOT EXISTS schema_migrations (version text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())");
   const files = (await readdir(migrationsDir)).filter((name) => name.endsWith(".sql")).sort();
   for (const file of files) {
@@ -21,6 +21,6 @@ try {
     await pool.query(await readFile(resolve(migrationsDir, file), "utf8"));
   }
 } finally {
-  await pool.query("SELECT pg_advisory_unlock(hashtext('space_schema_migrations'))").catch(() => undefined);
+  await pool.query("SELECT pg_advisory_unlock(hashtext('empty_schema_migrations'))").catch(() => undefined);
   await pool.end();
 }

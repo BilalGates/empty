@@ -8,7 +8,7 @@ Una interfaz demasiado vacía podría esconder origen, bloqueo, sync o conflicto
 
 ### High: un popup ambicioso sería frágil e inaccesible
 
-Editar notas, recovery, dispositivos e importación dentro del popup elevaría densidad, recortes y pérdida de estado al cerrarse. El popup queda limitado a desbloquear, buscar, rellenar, copiar, mostrar, generar y proponer guardado. La gestión completa abre Space.
+Editar notas, recovery, dispositivos e importación dentro del popup elevaría densidad, recortes y pérdida de estado al cerrarse. El popup queda limitado a desbloquear, buscar, rellenar, copiar, mostrar, generar y proponer guardado. La gestión completa abre Empty.
 
 ### High: “misma experiencia” entre Chrome e iOS puede producir UI no nativa
 

@@ -1,6 +1,6 @@
-name: Space
+name: Empty
 options:
-  bundleIdPrefix: com.space
+  bundleIdPrefix: com.empty
   deploymentTarget:
     iOS: "17.0"
   xcodeVersion: "16.0"
@@ -17,13 +17,13 @@ packages:
     url: https://github.com/P-H-C/phc-winner-argon2.git
     revision: f57e61e19229e23c4445b85494dbf7c07de721cb
 targets:
-  SpaceShared:
+  EmptyShared:
     type: framework
     platform: iOS
-    sources: [Sources/SpaceShared]
+    sources: [Sources/EmptyShared]
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.space.shared
+        PRODUCT_BUNDLE_IDENTIFIER: com.empty.shared
         APPLICATION_EXTENSION_API_ONLY: YES
         SKIP_INSTALL: YES
         GENERATE_INFOPLIST_FILE: YES
@@ -32,40 +32,42 @@ targets:
         product: Clibsodium
       - package: Argon2Reference
         product: argon2
-  Space:
+  Empty:
     type: application
     platform: iOS
-    sources: [Sources/SpaceApp]
+    sources: [Sources/EmptyApp]
     info:
-      path: Configuration/Space-Info.plist
+      path: Configuration/Empty-Info.plist
       properties:
-        CFBundleDisplayName: Space
+        CFBundleDisplayName: Empty
         UILaunchScreen: {}
-        NSFaceIDUsageDescription: Unlock your encrypted Space vault.
-        SpaceKeychainAccessGroup: "$(AppIdentifierPrefix)com.space.shared"
+        NSFaceIDUsageDescription: Unlock your encrypted Empty vault.
+        EmptyKeychainAccessGroup: "$(AppIdentifierPrefix)com.empty.shared"
+        EmptyAppGroup: group.com.empty.shared
     entitlements:
-      path: Configuration/Space.entitlements
+      path: Configuration/Empty.entitlements
       properties:
         com.apple.developer.authentication-services.autofill-credential-provider: true
-        com.apple.security.application-groups: [group.com.space.shared]
-        keychain-access-groups: ["$(AppIdentifierPrefix)com.space.shared"]
+        com.apple.security.application-groups: [group.com.empty.shared]
+        keychain-access-groups: ["$(AppIdentifierPrefix)com.empty.shared"]
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.space.app
+        PRODUCT_BUNDLE_IDENTIFIER: com.empty.app
     dependencies:
-      - target: SpaceShared
-      - target: SpaceCredentialProvider
+      - target: EmptyShared
+      - target: EmptyCredentialProvider
         embed: true
-  SpaceCredentialProvider:
+  EmptyCredentialProvider:
     type: app-extension
     platform: iOS
     sources: [Sources/CredentialProvider]
     info:
       path: Configuration/CredentialProvider-Info.plist
       properties:
-        CFBundleDisplayName: Space AutoFill
+        CFBundleDisplayName: Empty AutoFill
         NSFaceIDUsageDescription: Unlock a credential selected for AutoFill.
-        SpaceKeychainAccessGroup: "$(AppIdentifierPrefix)com.space.shared"
+        EmptyKeychainAccessGroup: "$(AppIdentifierPrefix)com.empty.shared"
+        EmptyAppGroup: group.com.empty.shared
         NSExtension:
           NSExtensionPointIdentifier: com.apple.authentication-services-credential-provider-ui
           NSExtensionPrincipalClass: "$(PRODUCT_MODULE_NAME).CredentialProviderViewController"
@@ -73,24 +75,24 @@ targets:
       path: Configuration/CredentialProvider.entitlements
       properties:
         com.apple.developer.authentication-services.autofill-credential-provider: true
-        com.apple.security.application-groups: [group.com.space.shared]
-        keychain-access-groups: ["$(AppIdentifierPrefix)com.space.shared"]
+        com.apple.security.application-groups: [group.com.empty.shared]
+        keychain-access-groups: ["$(AppIdentifierPrefix)com.empty.shared"]
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.space.app.credential-provider
+        PRODUCT_BUNDLE_IDENTIFIER: com.empty.app.credential-provider
         APPLICATION_EXTENSION_API_ONLY: YES
         SKIP_INSTALL: YES
     dependencies:
-      - target: SpaceShared
-  SpaceSharedTests:
+      - target: EmptyShared
+  EmptySharedTests:
     type: bundle.unit-test
     platform: iOS
     sources:
-      - path: Tests/SpaceSharedTests
+      - path: Tests/EmptySharedTests
       - path: ../../test-vectors
         buildPhase: resources
     dependencies:
-      - target: SpaceShared
+      - target: EmptyShared
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
@@ -99,19 +101,19 @@ targets:
     platform: iOS
     sources: [Tests/CredentialProviderTests]
     dependencies:
-      - target: SpaceShared
+      - target: EmptyShared
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
 schemes:
-  Space:
+  Empty:
     build:
       targets:
-        Space: all
-        SpaceCredentialProvider: all
-        SpaceSharedTests: [test]
+        Empty: all
+        EmptyCredentialProvider: all
+        EmptySharedTests: [test]
         CredentialProviderTests: [test]
     test:
       targets:
-        - SpaceSharedTests
+        - EmptySharedTests
         - CredentialProviderTests

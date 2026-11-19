@@ -4,10 +4,10 @@ import { sha256 } from '@noble/hashes/sha2';
 import {
   compareBytes, decodeCheckpoint, decodeSealedCheckpointRecord, encodeCheckpoint, encodeSealedCheckpointRecord,
   type Checkpoint
-} from '@space/protocol';
+} from '@empty/protocol';
 import { wipe } from './encoding.js';
 
-const CHECKPOINT_INFO = new TextEncoder().encode('space/checkpoint/v1');
+const CHECKPOINT_INFO = new TextEncoder().encode('empty/checkpoint/v1');
 
 function equalBytes(left: Uint8Array, right: Uint8Array): boolean {
   let difference = left.length ^ right.length;
